@@ -1,0 +1,14 @@
+Assignment 1 :
+
+Matches parantheses and prints True if it matches else prints False with the rightmost parantheses that does not match.
+i.e for ()(((()()()() , it will return 5 
+
+Options 
+        --array <maxLen>
+        --link
+        --file 
+        --text
+
+Last argument is either the filename or text as per argument.
+
+You can run the program using make. The make compiles the program and runs a test case for each scenario. You can see the make output to get examples of all possible options.
