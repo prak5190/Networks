@@ -1,5 +1,4 @@
 all : 
-	$(MAKE) compile
 	$(MAKE) run
 
 compile : 
@@ -7,6 +6,7 @@ compile :
 run : 	
 	$(MAKE) compile
 	./a.out
+
 debug : 
 	$(MAKE) compile
 	gdb a.out

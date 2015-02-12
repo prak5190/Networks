@@ -89,12 +89,12 @@ int create_server() {
    
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = INADDR_ANY;
-  serv_addr.sin_port = htons(1111);
+  serv_addr.sin_port = htons(1119);
 
   if(bind (sfd , (struct sockaddr*) &serv_addr , sizeof(serv_addr)) < 0)
     error("Unable to bind");
   else 
-    cout<<"Binding complete to 1111 \n";
+    cout<<"Binding complete to 1112 \n";
 
   while(1) {
     listen(sfd,5); 
@@ -126,41 +126,47 @@ int create_server() {
 void* handle_connection(void *args) {
   thread_args *t = (thread_args*)args;
   int newsockfd = t->sfd;
-  char buffer[256];
   /* Accept actual connection from the client */
   if (newsockfd < 0) {
     error("ERROR on accept");    
   }
       
   /* If connection is established then start communicating */
-  bzero(buffer,256);
-  int n = read(newsockfd,buffer,255 );
-   
+  char buffer[256];
+  int n;
+  char *str = new char[1];
+  do {
+    bzero(buffer,256);    
+    n = read(newsockfd,buffer,255);
+    char *newstr = new char [strlen(str) + strlen(buffer)];    
+    strcat(newstr ,str);
+    str = strcat(newstr ,buffer);
+    cout.flush();    
+  } while (n > 0 && n == 255);
+
   if (n < 0) {
     error("ERROR reading from socket");    
+  } else {      
+    // Parse the buffer to get http headers 
+    struct http_headers *headers = parseHttpHeaders(str);
+    // cout<<"Here is the message: \n"<<str;
+    const char* path = headers->path;
+    cout<<endl<<"The Path " << path<<endl;
+    cout.flush();
+    if (path && strcmp(path,"/") != 0) {
+      char respath[] = "www/";
+      strcat(respath,path);
+      getFile(respath , writeToClient , newsockfd);
+      writeToClient("Unable to open file ",newsockfd);      
+    } else {
+      /* Write a response to the client */
+      writeToClient("Hi , Type a path to a file in the www folder if you know one :)",newsockfd);
+    }
+         
+    if (n < 0) {
+      error("ERROR writing to socket");
+    }       
   }
-  
-  // Parse the buffer to get http headers 
-  struct http_headers *headers = parseHttpHeaders(buffer);
-  // cout<<"Here is the message: \n"<<buffer;
-  const char* path = headers->path;
-  cout<<endl<<"The Path " << path<<endl;
-  cout.flush();
-  if (path && strcmp(path,"/") != 0) {
-    char respath[] = "www/";
-    strcat(respath,path);
-    getFile(respath , writeToClient , newsockfd);
-    writeToClient("Unable to open file ",newsockfd);      
-  } else {
-    /* Write a response to the client */
-    writeToClient("Hi , Type a path to a file in the www folder if you know one :)",newsockfd);
-  }
-      
-   
-  if (n < 0) {
-    error("ERROR writing to socket");
-  }
-       
   cout.flush();
   shutdown(newsockfd,2);
 }
