@@ -11,9 +11,16 @@
 
 #define BUF_SIZE 100
 using namespace std; 
+
 struct http_headers {
   const char *path,*method,*protocol;
 };      
+
+struct thread_args {
+  int sfd;
+};
+
+void *handle_connection(void *t);
 
 http_headers* parseHttpHeaders(char* buf) {
   http_headers* h = new http_headers();
@@ -70,15 +77,14 @@ int shutdown_tcp(){
   return 0;
 };
 
+
 int create_server() {
-  char buffer[256];
   if (sfd == -1)                
     error("socket err");
 
   // struct sockaddr_in *my_addr, *peer_addr;
   /* Initialize socket structure */
-  struct sockaddr_in serv_addr, cli_addr;
-  
+  struct sockaddr_in serv_addr;  
   bzero((char *) &serv_addr, sizeof(serv_addr));
    
   serv_addr.sin_family = AF_INET;
@@ -91,48 +97,22 @@ int create_server() {
     cout<<"Binding complete to 1111 \n";
 
   while(1) {
-      listen(sfd,5);
-      int newsockfd;
-      socklen_t clilen = (socklen_t)sizeof(cli_addr);
-      /* Accept actual connection from the client */
-      newsockfd = accept(sfd, (struct sockaddr *)&cli_addr, &clilen);
+    listen(sfd,5); 
+    pthread_t thread;
+    thread_args *args = new thread_args();
+    bzero((char *) args, sizeof(thread_args));
 
-      if (newsockfd < 0) {
-        error("ERROR on accept");    
-      }
-      
-      /* If connection is established then start communicating */
-      bzero(buffer,256);
-      int n = read(newsockfd,buffer,255 );
-   
-      if (n < 0) {
-        error("ERROR reading from socket");    
-      }
-  
-      // Parse the buffer to get http headers 
-      struct http_headers *headers = parseHttpHeaders(buffer);
-      cout<<"Here is the message: \n"<<buffer;
-      const char* path = headers->path;
-      cout<<endl<<"The Path " << path<<endl;
-      cout.flush();
-      if (path && strcmp(path,"/") != 0) {
-        char respath[] = "www/";
-        strcat(respath,path);
-        getFile(respath , writeToClient , newsockfd);
-        writeToClient("Unable to open file ",newsockfd);      
-      } else {
-        /* Write a response to the client */
-        writeToClient("Hi , Type a path to a file in the www folder if you know one :)",newsockfd);
-      }
-      
-   
-      if (n < 0) {
-        error("ERROR writing to socket");
-      }
-       
-      cout.flush();
-      shutdown(newsockfd,2);
-  };
+    struct sockaddr_in cli_addr;
+    socklen_t clilen = (socklen_t)sizeof(cli_addr);
+
+    int newsockfd = accept(sfd, (struct sockaddr *)&cli_addr, &clilen);
+
+    args->sfd = newsockfd;
+    if(pthread_create(&thread , NULL , handle_connection, args)){
+      cout<<"Thread created";
+    };
+    //handle_connection(sfd);
+  }
   
   //  exit(1);
   return 0;
@@ -143,3 +123,44 @@ int create_server() {
 
 
 
+void* handle_connection(void *args) {
+  thread_args *t = (thread_args*)args;
+  int newsockfd = t->sfd;
+  char buffer[256];
+  /* Accept actual connection from the client */
+  if (newsockfd < 0) {
+    error("ERROR on accept");    
+  }
+      
+  /* If connection is established then start communicating */
+  bzero(buffer,256);
+  int n = read(newsockfd,buffer,255 );
+   
+  if (n < 0) {
+    error("ERROR reading from socket");    
+  }
+  
+  // Parse the buffer to get http headers 
+  struct http_headers *headers = parseHttpHeaders(buffer);
+  // cout<<"Here is the message: \n"<<buffer;
+  const char* path = headers->path;
+  cout<<endl<<"The Path " << path<<endl;
+  cout.flush();
+  if (path && strcmp(path,"/") != 0) {
+    char respath[] = "www/";
+    strcat(respath,path);
+    getFile(respath , writeToClient , newsockfd);
+    writeToClient("Unable to open file ",newsockfd);      
+  } else {
+    /* Write a response to the client */
+    writeToClient("Hi , Type a path to a file in the www folder if you know one :)",newsockfd);
+  }
+      
+   
+  if (n < 0) {
+    error("ERROR writing to socket");
+  }
+       
+  cout.flush();
+  shutdown(newsockfd,2);
+}
