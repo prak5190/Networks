@@ -19,7 +19,9 @@ static bool keepRunning = true;
 void shutdown(int dummy=0) {
     keepRunning = false;
     cout<<endl<<"Shutting down server";
+    cout.flush();
     shutdown_tcp();
+    exit(1);
 }
 
 int print(const char* str) {
@@ -31,7 +33,7 @@ int print(const char* str) {
 
 // Creating client
 int main (int argc ,char** argv) {  
-  create_server();
   signal(SIGINT, shutdown);
+  create_server();
   return 0;
 }

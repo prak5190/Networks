@@ -1,7 +1,3 @@
-#include <iostream>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
 #include "common.cpp"
 #include <unistd.h>
 #include <sys/types.h>          
@@ -64,16 +60,23 @@ int writeToClient(const char* buf , int fd) {
 int sfd = socket(AF_INET , SOCK_STREAM , 0);
 
 int shutdown_tcp(){
-  shutdown(sfd,2);
+  if(shutdown(sfd,2) == 0){
+    cout<<endl<<"Succesful Shutdown ....." << endl;
+    cout.flush();
+  } else{
+    cout<<endl<<"Unable to Shutdown ....." << endl;
+    cout.flush();   
+  };
   return 0;
 };
+
 int create_server() {
   char buffer[256];
   if (sfd == -1)                
     error("socket err");
 
   // struct sockaddr_in *my_addr, *peer_addr;
-   /* Initialize socket structure */
+  /* Initialize socket structure */
   struct sockaddr_in serv_addr, cli_addr;
   
   bzero((char *) &serv_addr, sizeof(serv_addr));
@@ -119,7 +122,7 @@ int create_server() {
         writeToClient("Unable to open file ",newsockfd);      
       } else {
         /* Write a response to the client */
-        writeToClient("Hi , Type a path to a file in the www folder if you know one :)",newsockfd);      
+        writeToClient("Hi , Type a path to a file in the www folder if you know one :)",newsockfd);
       }
       
    
