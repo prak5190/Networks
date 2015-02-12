@@ -7,7 +7,6 @@
 int getFile(const char* fpath , int (*cb)(const char*,int fd) , int sfd) {
   FILE* fd = NULL ;   
   fd = fopen(fpath,"r");
-
   if(NULL == fd)    {
     cout<<"Unable to open file"<<endl;
     return -1;
