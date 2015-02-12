@@ -1,8 +1,4 @@
 #include "common.cpp"
-#include <unistd.h>
-#include <sys/types.h>          
-#include <sys/socket.h>
-#include <sys/un.h>
 #include <pthread.h>
 // For sockaddr_in
 #include <netinet/in.h>
@@ -56,11 +52,6 @@ http_headers* parseHttpHeaders(char* buf) {
   // Parse the headers 
   //  h->path = "www/tcpserver";
   return h;
-};
-
-int writeToClient(const char* buf , int fd) {
-  write(fd,buf,strlen(buf));
-  return 0;
 };
 
 // Creating server 
@@ -134,16 +125,7 @@ void* handle_connection(void *args) {
   /* If connection is established then start communicating */
   char buffer[256];
   int n;
-  char *str = new char[1];
-  do {
-    bzero(buffer,256);    
-    n = read(newsockfd,buffer,255);
-    char *newstr = new char [strlen(str) + strlen(buffer)];    
-    strcat(newstr ,str);
-    str = strcat(newstr ,buffer);
-    cout.flush();    
-  } while (n > 0 && n == 255);
-
+  char *str = readFromSocket(newsockfd,&n);
   if (n < 0) {
     error("ERROR reading from socket");    
   } else {      

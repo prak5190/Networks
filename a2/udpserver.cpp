@@ -1,7 +1,5 @@
 #include "common.cpp"
 #include <unistd.h>
-#include <sys/types.h>          
-#include <sys/socket.h>
 #include <sys/un.h>
 #include <pthread.h>
 // For sockaddr_in
@@ -21,11 +19,6 @@ struct thread_args {
 };
 
 void *handle_connection(void *t);
-
-int writeToClient(const char* buf , int fd) {
-  write(fd,buf,strlen(buf));
-  return 0;
-};
 
 // Creating server 
 int sfd = socket(AF_INET , SOCK_DGRAM , 0);
@@ -53,7 +46,7 @@ int create_server() {
    
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = INADDR_ANY;
-  serv_addr.sin_port = htons(2222);
+  serv_addr.sin_port = htons(22212);
 
   if(bind (sfd , (struct sockaddr*) &serv_addr , sizeof(serv_addr)) < 0)
     error("Unable to bind \n");
@@ -100,19 +93,12 @@ void* handle_connection(void *args) {
       // This is an echo server
       /* If connection is established then start communicating */
       int n;
-      char *str = new char[1];
-      do {
-        bzero(buffer,256);    
-        n = read(newsockfd,buffer,255);
-        char *newstr = new char [strlen(str) + strlen(buffer)];    
-        strcat(newstr ,str);
-        str = strcat(newstr ,buffer);
-        cout.flush();    
-      } while (n > 0 && n == 255);
+      char *str = readFromSocket(newsockfd,n);
+      cout<<"********************************** " <<n;
 
       if (n < 0) {
-        error("ERROR reading from socket");    
-        return;
+        error("ERROR reading from socket");            
+        break;
       } else {
         if(first) {
           writeToClient("I am an echo server and am just gonna say wat you say",newsockfd);
@@ -131,4 +117,12 @@ void* handle_connection(void *args) {
        
   cout.flush();
   shutdown(newsockfd,2);
+}
+
+
+
+// Creating client
+int main (int argc ,char** argv) {  
+  create_server();
+  return 0;
 }
