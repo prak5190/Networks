@@ -18,9 +18,9 @@
 using namespace std; 
 
 // Creating client
-int client () {
+int client (int portno) {
   //create_server
-  int sockfd, portno, n;
+  int sockfd, n;
   struct sockaddr_in serv_addr;
   struct hostent *server;
   const char* name = "localhost";
@@ -35,7 +35,7 @@ int client () {
   
   server = gethostbyname(name);
 
-  portno = 1111;
+
   bzero((char *) &serv_addr, sizeof(serv_addr));  
   serv_addr.sin_family = AF_INET;
   bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
@@ -86,7 +86,26 @@ int print(const char* str) {
 
 // Creating client
 int main (int argc ,char** argv) {  
+  int port = 1120 , tmp,c;
+  while ((c = getopt (argc, argv, "p:")) != -1) {
+    switch(c) {
+    case 'p' : 
+      tmp = atoi(optarg);
+      if(tmp != 0) {
+        port = tmp;
+        cout<<"Binding port to "<<port << endl;
+      }
+      break;
+    case '?':
+      if (optopt == 'p')
+        cout<<"Enter port info";
+      break;
+    default:
+      cout<<"Option is "<<c <<endl;
+    };
+      
+  }; 
   signal(SIGINT, shutdown);
-  client();
+  client(port);
   return 0;
 }

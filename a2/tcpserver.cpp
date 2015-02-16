@@ -18,6 +18,7 @@ struct thread_args {
 
 void *handle_connection(void *t);
 
+
 http_headers* parseHttpHeaders(char* buf) {
   http_headers* h = new http_headers();
   FILE *str = fmemopen(buf,strlen(buf),"r");
@@ -42,15 +43,16 @@ http_headers* parseHttpHeaders(char* buf) {
         case 0 : h->method = token; break;
         case 1 : h->path = token; break;
         case 2 : h->protocol = token; break;
-        };
+        };break;
+      default: {
+        
+      }
       };
       i++;
     } while (token != NULL);
 
     j++;
   }
-  // Parse the headers 
-  //  h->path = "www/tcpserver";
   return h;
 };
 
@@ -69,7 +71,7 @@ int shutdown_tcp(){
 };
 
 
-int create_server() {
+int create_server(int port) {
   if (sfd == -1)                
     error("socket err");
 
@@ -77,7 +79,6 @@ int create_server() {
   /* Initialize socket structure */
   struct sockaddr_in serv_addr;  
   bzero((char *) &serv_addr, sizeof(serv_addr));
-  int port = 1119 ;
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = INADDR_ANY;
   serv_addr.sin_port = htons(port);
@@ -103,16 +104,11 @@ int create_server() {
       cout<<"Thread created";
     };
     //handle_connection(sfd);
-  }
+  };
   
   //  exit(1);
   return 0;
 };
-
-
-
-
-
 
 void* handle_connection(void *args) {
   thread_args *t = (thread_args*)args;
@@ -138,11 +134,15 @@ void* handle_connection(void *args) {
     if (path && strcmp(path,"/") != 0) {
       char respath[] = "www/";
       strcat(respath,path);
-      getFile(respath , writeToClient , newsockfd);
-      writeToClient("Unable to open file ",newsockfd);      
-    } else {
+      int m = getFile(respath , writeToClient , newsockfd);
+      if (m < 0){     
+        writeToClient("HTTP/1.0 404 Not Found\n Content-type: text/html \n\n <html><body><h2>Not found </h2></body></html>",newsockfd); 
+      }
+    } else if (!path || strcmp(path,"/") == 0) {
       /* Write a response to the client */
       writeToClient("Hi , Type a path to a file in the www folder if you know one :)",newsockfd);
+    } else {
+      writeToClient("HTTP/1.0 404 Not Found\n Content-type: text/html \n\n <html><body><h2>Not found </h2></body></html>",newsockfd);
     }
          
     if (n < 0) {
@@ -173,7 +173,26 @@ int print(const char* str) {
 
 // Creating client
 int main (int argc ,char** argv) {  
+  int c,port = 1120,tmp ;
+  while ((c = getopt (argc, argv, "p:")) != -1) {
+    switch(c) {
+    case 'p' : 
+      tmp = atoi(optarg);
+      if(tmp != 0) {
+        port = tmp;
+        cout<<"Binding port to "<<port << endl;
+      }
+      break;
+    case '?':
+      if (optopt == 'p')
+        cout<<"Enter port info";
+      break;
+    default:
+      cout<<"Option is "<<c <<endl;
+    };
+      
+  };
   signal(SIGINT, shutdown);
-  create_server();
+  create_server(port);
   return 0;
 }
