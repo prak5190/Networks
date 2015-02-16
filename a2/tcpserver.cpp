@@ -77,15 +77,15 @@ int create_server() {
   /* Initialize socket structure */
   struct sockaddr_in serv_addr;  
   bzero((char *) &serv_addr, sizeof(serv_addr));
-   
+  int port = 1119 ;
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = INADDR_ANY;
-  serv_addr.sin_port = htons(1119);
+  serv_addr.sin_port = htons(port);
 
   if(bind (sfd , (struct sockaddr*) &serv_addr , sizeof(serv_addr)) < 0)
     error("Unable to bind");
   else 
-    cout<<"Binding complete to 1112 \n";
+    cout<<"Binding complete to port "<<port<<" \n";
 
   while(1) {
     listen(sfd,5); 
@@ -124,8 +124,8 @@ void* handle_connection(void *args) {
       
   /* If connection is established then start communicating */
   char buffer[256];
-  int n;
-  char *str = readFromSocket(newsockfd,&n);
+  int n = 0;
+  char *str = readFromSocket(newsockfd,n);
   if (n < 0) {
     error("ERROR reading from socket");    
   } else {      
@@ -151,4 +151,29 @@ void* handle_connection(void *args) {
   }
   cout.flush();
   shutdown(newsockfd,2);
+}
+
+
+static bool keepRunning = true;
+
+void shutdown(int dummy=0) {
+    keepRunning = false;
+    cout<<endl<<"Shutting down server";
+    cout.flush();
+    shutdown_tcp();
+    exit(1);
+}
+
+int print(const char* str) {
+  cout<<str;
+  cout.flush();
+  return 0;
+}
+
+
+// Creating client
+int main (int argc ,char** argv) {  
+  signal(SIGINT, shutdown);
+  create_server();
+  return 0;
 }

@@ -21,32 +21,21 @@ struct thread_args {
 void *handle_connection(void *t);
 
 // Creating server 
-int sfd = socket(AF_INET , SOCK_DGRAM , 0);
-
-int shutdown_tcp(){
-  if(shutdown(sfd,2) == 0){
-    cout<<endl<<"Succesful Shutdown ....." << endl;
-    cout.flush();
-  } else{
-    cout<<endl<<"Unable to Shutdown ....." << endl;
-    cout.flush();   
-  };
-  return 0;
-};
-
-
 int create_server() {
+  int sfd = socket(AF_INET , SOCK_DGRAM , 0);
   if (sfd == -1)                
     error("socket err");
-
   // struct sockaddr_in *my_addr, *peer_addr;
   /* Initialize socket structure */
   struct sockaddr_in serv_addr;  
-  bzero((char *) &serv_addr, sizeof(serv_addr));
-   
+  struct sockaddr_in clientaddr; 
+  char buf[1255]; /* message buf */
+  int newsockfd;
+
+  bzero((char *) &serv_addr, sizeof(serv_addr));   
   serv_addr.sin_family = AF_INET;
-  serv_addr.sin_addr.s_addr = INADDR_ANY;
-  serv_addr.sin_port = htons(22212);
+  serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  serv_addr.sin_port = htons(2222);
 
   if(bind (sfd , (struct sockaddr*) &serv_addr , sizeof(serv_addr)) < 0)
     error("Unable to bind \n");
@@ -54,24 +43,21 @@ int create_server() {
     cout<<"Binding complete to 2222 \n";
 
   while(1) {
-    listen(sfd,5); 
     pthread_t thread;
     thread_args *args = new thread_args();
     bzero((char *) args, sizeof(thread_args));
 
-    struct sockaddr_in cli_addr;
-    socklen_t clilen = (socklen_t)sizeof(cli_addr);
+    socklen_t clientlen = (socklen_t)sizeof(clientaddr);
 
-    int newsockfd = accept(sfd, (struct sockaddr *)&cli_addr, &clilen);
+    cout<<"Waiting "<<endl;    
 
-    args->sfd = newsockfd;
-    if(pthread_create(&thread , NULL , handle_connection, args)){
-      cout<<"Thread created";
-    };
-    //handle_connection(sfd);
+    int n = recvfrom(sfd, buf, 1000, 0,
+		 (struct sockaddr *) &clientaddr, &clientlen);
+    cout<<"Recieved message \n"<<buf<<endl;    
+    n = sendto(sfd, buf, strlen(buf), 0, 
+	       (struct sockaddr *) &clientaddr, clientlen);
   };
   
-  //  exit(1);
   return 0;
 };
 

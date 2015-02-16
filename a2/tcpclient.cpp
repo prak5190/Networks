@@ -68,3 +68,25 @@ int client () {
   close(sockfd); 
   return 0;
 }
+static bool keepRunning = true;
+
+void shutdown(int dummy=0) {
+    keepRunning = false;
+    cout<<endl<<"Shutting down server";
+    cout.flush();
+    exit(1);
+}
+
+int print(const char* str) {
+  cout<<str;
+  cout.flush();
+  return 0;
+}
+
+
+// Creating client
+int main (int argc ,char** argv) {  
+  signal(SIGINT, shutdown);
+  client();
+  return 0;
+}
