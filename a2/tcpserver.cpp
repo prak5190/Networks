@@ -11,7 +11,7 @@ using namespace std;
 struct thread_args {
   int sfd;
 };
-
+static bool justDisplayTime = false;
 // The broken pipe error
 void signal_callback_handler(int signum){
   printf("Caught signal SIGPIPE %d\n",signum);
@@ -76,8 +76,13 @@ int create_server(int port) {
 void* handle_connection(void *args) {
   thread_args *t = (thread_args*)args;
   int newsockfd = t->sfd;
-  cout<<"Handling connection";
-  cout.flush();
+  // Start time
+  clock_t start, end;
+  double cpu_time_used;
+  start = clock();
+
+  // cout<<"Handling connection";
+  // cout.flush();
   /* Accept actual connection from the client */
   if (newsockfd < 0) {
     error("ERROR on accept");    
@@ -99,7 +104,7 @@ void* handle_connection(void *args) {
     if (path && strcmp(path,"/") != 0) {
       char respath[] = "www/";
       strcat(respath,path);
-      cout<<endl<<"Thread processing file "<<respath;
+      //cout<<endl<<"Thread processing file "<<respath;
       int m = getFile(respath , writeToClient , newsockfd);
       if (m < 0){     
         writeToClient("HTTP/1.0 404 Not Found\n Content-type: text/html \n\n <html><body><h2>Not found </h2></body></html>",newsockfd); 
@@ -116,7 +121,10 @@ void* handle_connection(void *args) {
     }       
     close(newsockfd);
   }
-  cout<<"Writing finished ";
+  //cout<<"Writing finished ";
+  end = clock();
+  cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+  cout<<endl<<"Time taken "<<cpu_time_used<<endl;
   cout.flush();
   shutdown(newsockfd,2);
 }
@@ -138,7 +146,7 @@ int print(const char* str) {
 // Creating client
 int main (int argc ,char** argv) {  
   int c,port = 1120,tmp ;
-  while ((c = getopt (argc, argv, "p:")) != -1) {
+  while ((c = getopt (argc, argv, "p:t")) != -1) {
     switch(c) {
     case 'p' : 
       tmp = atoi(optarg);
@@ -147,6 +155,8 @@ int main (int argc ,char** argv) {
         cout<<"Binding port to "<<port << endl;
       }
       break;
+    case 't':
+      justDisplayTime = true;
     case '?':
       if (optopt == 'p')
         cout<<"Enter port info";

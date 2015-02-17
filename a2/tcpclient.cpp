@@ -16,17 +16,23 @@
 
 #define BUF_SIZE 100
 using namespace std; 
-
+clock_t start, end;
+double cpu_time_used;
 void ondata (const char* data , int fd) {
   cout<<data;
   if(strlen(data) == 0){
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    cout<<endl<<"Time taken "<<cpu_time_used<<endl;
     close(fd);
   };
 };
 
 // Creating client
 int client (int portno , const char* host , const char* path ,int protocol) {
-  //create_server
+  // Start time
+  start = clock();
+  
   int sockfd, n;
   struct sockaddr_in serv_addr;
   struct hostent *server;

@@ -1,6 +1,5 @@
 #ifndef __COMMON__
 #define __COMMON__ 1 
-
 #include <iostream>
 #include <cstdio>
 #include <cstdlib>
@@ -13,6 +12,7 @@
 #include <signal.h> 
 #include <cstdarg>
 #include <error.h>
+#include <time.h>
 using namespace std; 
 
 struct http_headers {
@@ -37,13 +37,13 @@ http_headers* parseHttpHeaders(char* buf) {
   char *saveptr;
   size_t len = 0;
   int j = 0;
-  cout<<"Parsing headers";
-  cout.flush();
+  // cout<<"Parsing headers";
+  // cout.flush();
   // Can make this a while 
   {
     char *line = NULL ;
     getline(&line,&len,str);    
-    cout<<"Line is " <<line;
+    // cout<<"Line is " <<line;
     char *token = NULL ;
     int i = 0;
     do {      

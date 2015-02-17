@@ -1,21 +1,30 @@
 ## TCP Server
+Usage : 
 
-- Persistent connections ??
-- Implement a 404 mechanism  - Dome
-- Make port and file dir configurable - Port is configurable
-- Currently tested with browser only - need to check out the client 
+    ./tcpserver -p 1124
+    ./tcpclient -p 1124 -h localhost -f /file
+
+
+- Implement a 404 mechanism  - Done
+- Works with client and browser
+- Currently looks for files in the www directory
+- Persistent connections ?? 
 
 
 ## UDP Server
+Usage :
 
-- Client and server need to talk to each other - They do
-- Add something to "make" for that - ok
-- Client needs to record number of bytes it recieves 
-- Server should indicate when last byte of file has been transmitted
+    ./udpserver -p 1112
+    ./udpclient -p 1112 -h localhost -f /tcpserver
+    
+- Client and server talk to each other using http headers 
+- Client displays size of request 
+- Server indicates end of transmission by sending a packet of size 0
 
 ## Threads
 
-- Need to join threads and safely kill them
+- TCP server is multi threaded - can handle simultaneous requests
+- Thread handling is not that great - Memory leaks may be present. Currently threads are created and assumption is that they exit when socket finishes.
 
 ## Writeup
 
