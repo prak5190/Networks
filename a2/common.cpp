@@ -11,14 +11,14 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <signal.h> 
-
+#include <cstdarg>
+#include <error.h>
 using namespace std; 
 
 void error (const char* msg) {
   cout<<"Error "<<msg;
   exit(1);
 }
-
 char* readFromSocket(int fd,int &n) {
   char *str = new char[1];
   char buffer[256];
@@ -36,6 +36,20 @@ char* readFromSocket(int fd,int &n) {
 int writeToClient(const char* buf , int fd) {
   write(fd,buf,strlen(buf));
   return 0;
+};
+
+// Use this to debug 
+int logLevel = 3;
+void log(int level,int nargs , ...) {
+  va_list ap;
+  va_start (ap , nargs);
+  if (level <= logLevel){
+    for (int i = 1; i <= nargs ; i++){
+      const char* a = va_arg(ap,const char*);
+      cout<<a;
+    }
+  }
+  va_end(ap);
 };
 
 // Include files you want to be commonly included - These files can be recurrsively required

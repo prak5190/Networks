@@ -16,6 +16,11 @@ struct thread_args {
   int sfd;
 };
 
+// The broken pipe error
+void signal_callback_handler(int signum){
+  printf("Caught signal SIGPIPE %d\n",signum);
+}
+
 void *handle_connection(void *t);
 
 
@@ -149,6 +154,7 @@ void* handle_connection(void *args) {
       error("ERROR writing to socket");
     }       
   }
+  cout<<"Writing finished ";
   cout.flush();
   shutdown(newsockfd,2);
 }
@@ -192,6 +198,7 @@ int main (int argc ,char** argv) {
     };
       
   };
+  signal(SIGPIPE, signal_callback_handler);
   signal(SIGINT, shutdown);
   create_server(port);
   return 0;

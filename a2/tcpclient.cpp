@@ -18,12 +18,11 @@
 using namespace std; 
 
 // Creating client
-int client (int portno) {
+int client (int portno , const char* host , const char* path ) {
   //create_server
   int sockfd, n;
   struct sockaddr_in serv_addr;
   struct hostent *server;
-  const char* name = "localhost";
   
   char buffer[256];
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -33,8 +32,7 @@ int client (int portno) {
       exit(1);
   };
   
-  server = gethostbyname(name);
-
+  server = gethostbyname(host);
 
   bzero((char *) &serv_addr, sizeof(serv_addr));  
   serv_addr.sin_family = AF_INET;
@@ -46,25 +44,28 @@ int client (int portno) {
     error("ERROR connecting");
   }
   
-  bzero(buffer,256);
-  strcpy(buffer , "111111");
+  const char* msg = "GET %s HTTP/%s \r\n Host: %s \r\n Connection: keep-alive\r\n User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/34.0.1847.116 Chrome/34.0.1847.116 Safari/537.36\r\n\r\n Accept-Encoding: gzip,deflate,sdch \n\n";
 
+  char message[1000];
+  bzero(message , sizeof(message));
+  char protocol[] = "1.0";
+  sprintf(message,msg ,path, protocol , host);
   /* Send message to the server */
-  n = write(sockfd,buffer,strlen(buffer));
+  n = send(sockfd,message,strlen(msg),0);
    
   if (n < 0)    {
     error("ERROR writing to socket");
   }
    
-  /* Now read server response */
-  bzero(buffer,256);
-  n = read(sockfd,buffer,255);
-   
+  /* Now read server response until length*/
+  char *str = readFromSocket(sockfd,n);
+  // bzero(buffer,256);
+  // n = read(sockfd,buffer,255);   
   if (n < 0)    {
     error("ERROR reading from socket");
   }
 
-  printf("%s\n",buffer);
+  printf("%s\n",str);
   close(sockfd); 
   return 0;
 }
@@ -86,8 +87,10 @@ int print(const char* str) {
 
 // Creating client
 int main (int argc ,char** argv) {  
-  int port = 1120 , tmp,c;
-  while ((c = getopt (argc, argv, "p:")) != -1) {
+  int port = 1120 , tmp,c ;  
+  char* host , *path ,*tmp2;  
+  int n;
+  while ((c = getopt (argc, argv, "h:f:p:")) != -1) {
     switch(c) {
     case 'p' : 
       tmp = atoi(optarg);
@@ -96,16 +99,30 @@ int main (int argc ,char** argv) {
         cout<<"Binding port to "<<port << endl;
       }
       break;
+    case 'h' : 
+      tmp2 = optarg;
+      n = sizeof(optarg);
+      host = new char [n];
+      strcpy(host , optarg);
+      cout<<"Host is :  "<< host << endl;
+      break;
+    case 'f' : 
+      tmp2 = optarg;
+      n = sizeof(optarg);
+      path = new char [n];
+      strcpy(path , optarg);
+      cout<<"File is :  "<< path << endl;
+      break;
     case '?':
       if (optopt == 'p')
         cout<<"Enter port info";
       break;
     default:
       cout<<"Option is "<<c <<endl;
-    };
-      
-  }; 
+    };      
+  };
+  
   signal(SIGINT, shutdown);
-  client(port);
+  client(port , host , path);
   return 0;
 }
