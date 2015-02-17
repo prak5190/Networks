@@ -8,10 +8,6 @@
 #define BUF_SIZE 100
 using namespace std; 
 
-struct http_headers {
-  const char *path,*method,*protocol;
-};      
-
 struct thread_args {
   int sfd;
 };
@@ -22,44 +18,6 @@ void signal_callback_handler(int signum){
 }
 
 void *handle_connection(void *t);
-
-
-http_headers* parseHttpHeaders(char* buf) {
-  http_headers* h = new http_headers();
-  FILE *str = fmemopen(buf,strlen(buf),"r");
-  // Reading first line to get path and method
-  char *saveptr;
-  size_t len = 0;
-  int j = 0;
-  // Can make this a while 
-  {
-    char *line = NULL ;
-    getline(&line,&len,str);    
-    cout<<"Line is " <<line;
-    char *token = NULL ;
-    int i = 0;
-    do {      
-      token = strtok_r(line, " :",&saveptr);      
-      line = NULL;
-      // Depending on i -- infer meaning 
-      switch(j) {
-      case 0:
-        switch (i) {
-        case 0 : h->method = token; break;
-        case 1 : h->path = token; break;
-        case 2 : h->protocol = token; break;
-        };break;
-      default: {
-        
-      }
-      };
-      i++;
-    } while (token != NULL);
-
-    j++;
-  }
-  return h;
-};
 
 // Creating server 
 int sfd = socket(AF_INET , SOCK_STREAM , 0);
@@ -118,7 +76,8 @@ int create_server(int port) {
 void* handle_connection(void *args) {
   thread_args *t = (thread_args*)args;
   int newsockfd = t->sfd;
-
+  cout<<"Handling connection";
+  cout.flush();
   /* Accept actual connection from the client */
   if (newsockfd < 0) {
     error("ERROR on accept");    
@@ -127,7 +86,7 @@ void* handle_connection(void *args) {
   /* If connection is established then start communicating */
   char buffer[256];
   int n = 0;
-  char *str = readFromSocket(newsockfd,n);
+  char *str = readFromSocketS(newsockfd,n);
   if (n < 0) {
     error("ERROR reading from socket");    
   } else {      
@@ -155,6 +114,7 @@ void* handle_connection(void *args) {
     if (n < 0) {
       error("ERROR writing to socket");
     }       
+    close(newsockfd);
   }
   cout<<"Writing finished ";
   cout.flush();

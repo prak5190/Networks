@@ -15,6 +15,10 @@
 #include <error.h>
 using namespace std; 
 
+struct http_headers {
+  const char *path,*method,*protocol;
+};      
+
 void unknownexit(int errno) {
     cout<<endl<<"Exiting ..."<<errno<<endl;
     cout.flush();
@@ -26,6 +30,44 @@ void error (const char* msg) {
   exit(1);
 }
 
+http_headers* parseHttpHeaders(char* buf) {
+  http_headers* h = new http_headers();
+  FILE *str = fmemopen(buf,strlen(buf),"r");
+  // Reading first line to get path and method
+  char *saveptr;
+  size_t len = 0;
+  int j = 0;
+  cout<<"Parsing headers";
+  cout.flush();
+  // Can make this a while 
+  {
+    char *line = NULL ;
+    getline(&line,&len,str);    
+    cout<<"Line is " <<line;
+    char *token = NULL ;
+    int i = 0;
+    do {      
+      token = strtok_r(line, " :",&saveptr);      
+      line = NULL;
+      // Depending on i -- infer meaning 
+      switch(j) {
+      case 0:
+        switch (i) {
+        case 0 : h->method = token; break;
+        case 1 : h->path = token; break;
+        case 2 : h->protocol = token; break;
+        };break;
+      default: {
+        
+      }
+      };
+      i++;
+    } while (token != NULL);
+    j++;
+  }
+  return h;
+};
+
 char* readFromSocket(int fd,int &n,void (*cb)(const char*,int fd)) {
   char *str = new char[1];
   char buffer[256];
@@ -36,7 +78,21 @@ char* readFromSocket(int fd,int &n,void (*cb)(const char*,int fd)) {
   } while (n != 0);
   return str;
 }
-char* readFromSocket(int fd,int &n) {
+char* readFromSocketS(int fd,int &n) {
+  char *str = new char[1];
+  char buffer[256];
+  do {
+    bzero(buffer,256);    
+    n = read(fd,buffer,255);
+    char *newstr = new char [strlen(str) + strlen(buffer)];    
+    strcat(newstr ,str);
+    str = strcat(newstr ,buffer);
+    cout.flush();    
+  } while (n > 0 && n == 255);
+  return str;
+}
+
+char* readFromSocket1(int fd,int &n) {
   char *str = new char[1];
   char buffer[256];
   do {
@@ -49,6 +105,7 @@ char* readFromSocket(int fd,int &n) {
   } while (n != 0);
   return str;
 }
+
 
 int writeToClient(const char* buf , int fd) {
   send(fd,buf,strlen(buf),0);

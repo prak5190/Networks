@@ -10,18 +10,17 @@
 #define BUF_SIZE 100
 using namespace std; 
 
-struct http_headers {
-  const char *path,*method,*protocol;
-};      
-
 struct thread_args {
   int sfd;
 };
 
 void *handle_connection(void *t);
-
+int writeToUdpClient(const char* buf , int fd , sockaddr *clientaddr,socklen_t clientlen) {
+  int n = sendto(fd,buf, strlen(buf), 0, clientaddr, clientlen);
+  return n;
+};
 // Creating server 
-int create_server() {
+int create_server(int port) {
   int sfd = socket(AF_INET , SOCK_DGRAM , 0);
   if (sfd == -1)                
     error("socket err");
@@ -35,12 +34,12 @@ int create_server() {
   bzero((char *) &serv_addr, sizeof(serv_addr));   
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  serv_addr.sin_port = htons(2222);
+  serv_addr.sin_port = htons(port);
 
   if(bind (sfd , (struct sockaddr*) &serv_addr , sizeof(serv_addr)) < 0)
     error("Unable to bind \n");
   else 
-    cout<<"Binding complete to 2222 \n";
+    cout<<"Binding complete to "<<port<<" \n";
 
   while(1) {
     pthread_t thread;
@@ -50,65 +49,75 @@ int create_server() {
     socklen_t clientlen = (socklen_t)sizeof(clientaddr);
 
     cout<<"Waiting "<<endl;    
-
+    
     int n = recvfrom(sfd, buf, 1000, 0,
 		 (struct sockaddr *) &clientaddr, &clientlen);
-    cout<<"Recieved message \n"<<buf<<endl;    
-    n = sendto(sfd, buf, strlen(buf), 0, 
-	       (struct sockaddr *) &clientaddr, clientlen);
-  };
-  
+    if (n < 0) {
+      error("ERROR reading from socket");    
+    } else {      
+      cout<<"Recieved message \n"<<buf<<endl;    
+      // Parse the buffer to get http headers 
+      struct http_headers *headers = parseHttpHeaders(buf);
+      // cout<<"Here is the message: \n"<<str;
+      const char* path = headers->path;
+      cout<<endl<<"The Path " << path<<endl;
+      cout.flush();
+      if (path && strcmp(path,"/") != 0) {
+        char respath[] = "www/";
+        strcat(respath,path);      
+        int m = getFile(respath , writeToUdpClient , sfd,
+                        (struct sockaddr *) &clientaddr, clientlen);
+        const char* msg = "HTTP/1.0 404 Not Found\n Content-type: text/html \n\n <html><body><h2>Not found </h2></body></html>";
+        if (m < 0){
+          n = sendto(sfd,msg, strlen(msg), 0, 
+                     (struct sockaddr *) &clientaddr, clientlen);
+        }
+      } else if (!path || strcmp(path,"/") == 0) {
+        const char* msg2 = "Hi , Type a path to a file in the www folder if you know one :)";
+        /* Write a response to the client */
+        n = sendto(sfd,msg2, strlen(msg2), 0, 
+                   (struct sockaddr *) &clientaddr, clientlen);
+      } else {
+        const char* msg3 = "HTTP/1.0 404 Not Found\n Content-type: text/html \n\n <html><body><h2>Not found </h2></body></html>";
+        n = sendto(sfd,msg3, strlen(msg3), 0, 
+                   (struct sockaddr *) &clientaddr, clientlen);
+      }
+         
+      if (n < 0) {
+        error("ERROR writing to socket");
+      } else {
+        // Send a close message to the waiting client 
+        n = sendto(sfd,"", 0, 0, 
+                   (struct sockaddr *) &clientaddr, clientlen);
+      }
+    }
+  };  
   return 0;
 };
 
 
 
-
-
-
-void* handle_connection(void *args) {
-  thread_args *t = (thread_args*)args;
-  int newsockfd = t->sfd;
-  char buffer[256];
-  /* Accept actual connection from the client */
-  if (newsockfd < 0) {
-    error("ERROR on accept");    
-  } else {
-    bool first = true ;
-    while(1) {
-      // This is an echo server
-      /* If connection is established then start communicating */
-      int n;
-      char *str = readFromSocket(newsockfd,n);
-      cout<<"********************************** " <<n;
-
-      if (n < 0) {
-        error("ERROR reading from socket");            
-        break;
-      } else {
-        if(first) {
-          writeToClient("I am an echo server and am just gonna say wat you say",newsockfd);
-        } else {
-          writeToClient(str,newsockfd);
-        }              
-      } 
-        
-      if (n < 0) {
-        error("ERROR writing to socket");
-      }
-    };
-
-  }
-      
-       
-  cout.flush();
-  shutdown(newsockfd,2);
-}
-
-
-
 // Creating client
 int main (int argc ,char** argv) {  
-  create_server();
+ int c,port = 2222,tmp ;
+  while ((c = getopt (argc, argv, "p:")) != -1) {
+    switch(c) {
+    case 'p' : 
+      tmp = atoi(optarg);
+      if(tmp != 0) {
+        port = tmp;
+        cout<<"Binding port to "<<port << endl;
+      }
+      break;
+    case '?':
+      if (optopt == 'p')
+        cout<<"Enter port info";
+      break;
+    default:
+      cout<<"Option is "<<c <<endl;
+    };
+      
+  };
+  create_server(port);
   return 0;
 }

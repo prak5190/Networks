@@ -23,8 +23,6 @@ int client (int portno , const char* host , const char* path ) {
   int sockfd, n;
   struct sockaddr_in serv_addr;
   struct hostent *server;
-  
-  char buffer[256];
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   
   if (sockfd < 0) {
@@ -40,31 +38,32 @@ int client (int portno , const char* host , const char* path ) {
   serv_addr.sin_port = htons(portno);
 
   /* Now connect to the server */
-  if (connect(sockfd,(struct sockaddr *) &serv_addr ,sizeof(serv_addr)) < 0) {
-    error("ERROR connecting");
-  } else {    
-    while(1) {
-      char buf[1000],buffer[1000];
-      bzero(buffer, sizeof(buffer));  
-      /* Send message to the server */
-      char message[1000];
-      bzero(message , sizeof(message));
-      char protocol[] = "1.0";
-      sprintf(message,HTTP_HEADER ,path, protocol , host);
+  char buf[1000],buffer[1000];
+  bzero(buffer, sizeof(buffer));  
+  /* Send message to the server */
+  char message[1000];
+  bzero(message , sizeof(message));
+  char protocol[] = "1.0";
+  sprintf(message,HTTP_HEADER ,path, protocol , host);
 
-      socklen_t clientlen = (socklen_t)sizeof(serv_addr);
-      cout<<"sending message "<<buffer;
-      n = sendto(sockfd, message, strlen(message), 0, 
-                 (struct sockaddr *) &serv_addr, clientlen);
-      if (n < 0)    {
-        error("ERROR writing to socket");
-      } else {
-        // Read server response and print out
-        int n = recvfrom(sockfd,buf,1000,0,NULL,NULL);
-        cout<<"\n Response : \n" << buf;        
-      }
+  socklen_t clientlen = (socklen_t)sizeof(serv_addr);
+  cout<<"sending message "<<buffer;
+  long totalSize = 0;
+  n = sendto(sockfd, message, strlen(message), 0, 
+             (struct sockaddr *) &serv_addr, clientlen);
+  if (n < 0)    {
+    error("ERROR writing to socket");
+  } else {
+    cout<<"\nResponse \n";
+    while(1){
+      // Read server response and print out
+      int n = recvfrom(sockfd,buf,1000,0,NULL,NULL);
+      totalSize += n;
+      if (n == 0)
+        break;
     };
   }
+  cout<<endl<<"Connection closed , Total Size is : "<<totalSize;
        
   if (n < 0)    {
     error("ERROR reading from socket");
