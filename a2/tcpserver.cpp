@@ -118,6 +118,7 @@ int create_server(int port) {
 void* handle_connection(void *args) {
   thread_args *t = (thread_args*)args;
   int newsockfd = t->sfd;
+
   /* Accept actual connection from the client */
   if (newsockfd < 0) {
     error("ERROR on accept");    
@@ -139,6 +140,7 @@ void* handle_connection(void *args) {
     if (path && strcmp(path,"/") != 0) {
       char respath[] = "www/";
       strcat(respath,path);
+      cout<<endl<<"Thread processing file "<<respath;
       int m = getFile(respath , writeToClient , newsockfd);
       if (m < 0){     
         writeToClient("HTTP/1.0 404 Not Found\n Content-type: text/html \n\n <html><body><h2>Not found </h2></body></html>",newsockfd); 
@@ -159,11 +161,7 @@ void* handle_connection(void *args) {
   shutdown(newsockfd,2);
 }
 
-
-static bool keepRunning = true;
-
 void shutdown(int dummy=0) {
-    keepRunning = false;
     cout<<endl<<"Shutting down server";
     cout.flush();
     shutdown_tcp();
@@ -199,6 +197,7 @@ int main (int argc ,char** argv) {
       
   };
   signal(SIGPIPE, signal_callback_handler);
+  //signal(SIGSEGV, segv_handler);
   signal(SIGINT, shutdown);
   create_server(port);
   return 0;

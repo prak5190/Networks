@@ -3,7 +3,6 @@
 #ifndef __FileHandler__
 #define __FileHandler__ 1 
 
-// The ... is transparently just passed to callback - we really don't care
 int getFile(const char* fpath , int (*cb)(const char*,int fd) , int sfd) {
   FILE* fd = NULL ;   
   fd = fopen(fpath,"r");

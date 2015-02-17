@@ -18,12 +18,11 @@
 using namespace std; 
 
 // Creating client
-int client () {
+int client (int portno , const char* host , const char* path ) {
   //create_server
-  int sockfd, portno, n;
+  int sockfd, n;
   struct sockaddr_in serv_addr;
   struct hostent *server;
-  const char* name = "localhost";
   
   char buffer[256];
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -33,9 +32,8 @@ int client () {
       exit(1);
   };
   
-  server = gethostbyname(name);
+  server = gethostbyname(host);
 
-  portno = 2222;
   bzero((char *) &serv_addr, sizeof(serv_addr));  
   serv_addr.sin_family = AF_INET;
   bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
@@ -48,18 +46,21 @@ int client () {
     while(1) {
       char buf[1000],buffer[1000];
       bzero(buffer, sizeof(buffer));  
-      cout<<" Enter message to send to server "<<endl;      
-      cin>>buf;
       /* Send message to the server */
+      char message[1000];
+      bzero(message , sizeof(message));
+      char protocol[] = "1.0";
+      sprintf(message,HTTP_HEADER ,path, protocol , host);
+
       socklen_t clientlen = (socklen_t)sizeof(serv_addr);
       cout<<"sending message "<<buffer;
-      n = sendto(sockfd, buf, strlen(buf), 0, 
+      n = sendto(sockfd, message, strlen(message), 0, 
                  (struct sockaddr *) &serv_addr, clientlen);
       if (n < 0)    {
         error("ERROR writing to socket");
       } else {
         // Read server response and print out
-        int n = recvfrom(sockfd,buf,10000,0,NULL,NULL);
+        int n = recvfrom(sockfd,buf,1000,0,NULL,NULL);
         cout<<"\n Response : \n" << buf;        
       }
     };
@@ -76,6 +77,12 @@ int client () {
 
 // Creating client
 int main (int argc ,char** argv) {  
-  client();
+  signal(SIGSEGV, unknownexit);
+  if(argc > 1) {
+    client_args args = getClientArgs(argc , argv);
+    client(args.port , args.host , args.path);
+  } else {
+    cout<<"Please enter port info -p , host info -h and file info -f";
+  };
   return 0;
 }
