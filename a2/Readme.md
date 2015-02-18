@@ -8,7 +8,13 @@ Usage :
 - Implement a 404 mechanism  - Done
 - Works with client and browser
 - Currently looks for files in the www directory
-- Persistent connections ?? 
+- Persistent connections are enabled by using `-r` on the server
+
+        ./tcpserver -p 1124 -r
+        
+- Can view only the time instead of while data for tcpclient using `-t` option
+  
+        ./tcpclient -p 1124 -h localhost -f /file -t
 
 
 ## UDP Server
@@ -25,7 +31,3 @@ Usage :
 
 - TCP server is multi threaded - can handle simultaneous requests
 - Thread handling is not that great - Memory leaks may be present. Currently threads are created and assumption is that they exit when socket finishes.
-
-## Writeup
-
-- Need to deploy it on CS machine and test RTT

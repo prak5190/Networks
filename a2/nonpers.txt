@@ -1,0 +1,55 @@
+Binding port to 2000
+Host is :  localhost
+File is :  /file
+
+Time taken 0.188812
+Time taken 0.162422
+Time taken 0.252917
+Time taken 0.18025
+Time taken 0.197345
+Time taken 0.169124
+Time taken 0.167161
+Time taken 0.176085
+Time taken 0.169622
+Time taken 0.229706
+Time taken 0.228218
+
+
+
+real 0m0.198s        user 0m0.016s      sys 0m0.145s
+real 0m0.327s        user 0m0.029s      sys 0m0.267s
+real 0m0.840s        user 0m0.069s      sys 0m0.696s
+real 0m1.000s        user 0m0.084s      sys 0m0.818s
+real 0m1.187s        user 0m0.101s      sys 0m0.967s
+real 0m1.650s        user 0m0.135s      sys 0m1.355s
+real 0m1.931s        user 0m0.158s      sys 0m1.572s
+real 0m2.370s        user 0m0.190s      sys 0m1.869s
+real 0m2.511s        user 0m0.206s      sys 0m2.005s
+real 0m2.838s        user 0m0.229s      sys 0m2.245s
+
+
+Real       User      Sys
+
+0.198   0.016  0.145
+0.327   0.029  0.267
+0.840   0.069  0.696
+1.000   0.084  0.818
+1.187   0.101  0.967
+1.650   0.135  1.355
+1.931   0.158  1.572
+2.370   0.190  1.869
+2.511   0.206  2.005
+2.838   0.229  2.245
+
+
+0.198   0.016  0.145
+0.327   0.029  0.267
+0.840   0.069  0.696
+1.000   0.084  0.818
+1.187   0.101  0.967
+1.650   0.135  1.355
+1.931   0.158  1.572
+2.370   0.190  1.869
+2.511   0.206  2.005
+2.838   0.229  2.245
+
