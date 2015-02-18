@@ -16,7 +16,8 @@
 using namespace std; 
 
 struct http_headers {
-  const char *path,*method,*protocol;
+  const char *path,*method,*protocol;  
+  long contentLength;
 };      
 
 void unknownexit(int errno) {
@@ -40,16 +41,32 @@ http_headers* parseHttpHeaders(char* buf) {
   // cout<<"Parsing headers";
   // cout.flush();
   // Can make this a while 
+  char *line = NULL ;
+  while(getline(&line,&len,str) > 0)
   {
-    char *line = NULL ;
-    getline(&line,&len,str);    
+    // cout<<"Read line is "<<line;
     // cout<<"Line is " <<line;
     char *token = NULL ;
     int i = 0;
+    bool isContentLength = false;
     do {      
       token = strtok_r(line, " :",&saveptr);      
       line = NULL;
+      if (isContentLength) {
+        switch(i) {
+          //case 0 : isContentLength = false ; break;
+        case 1 : 
+          char *endptr;
+          h->contentLength = strtol(token, &endptr, 10);
+          //atoi(token);
+          isContentLength = false; break;
+        }
+      };
+
       // Depending on i -- infer meaning 
+      // if(token != NULL)
+      // cout<<"Token "<< token<<endl;
+      // cout.flush();
       switch(j) {
       case 0:
         switch (i) {
@@ -58,26 +75,61 @@ http_headers* parseHttpHeaders(char* buf) {
         case 2 : h->protocol = token; break;
         };break;
       default: {
-        
+        switch(i) {
+        case 0: if (strcasecmp(token,"Content-Length") == 0)
+            isContentLength = true ;                     
+        }        
       }
       };
       i++;
     } while (token != NULL);
     j++;
-  }
+  };
+  cout.flush();
   return h;
 };
 
 char* readFromSocket(int fd,int &n,void (*cb)(const char*,int fd)) {
   char *str = new char[1];
+  char headerBuffer[400];
+  char tmp[1],old; 
+  int i = 0;
+  while (1){
+    bzero(tmp,1); 
+    recv(fd,tmp,1,0);
+    if (tmp[0] == '\n' && old == '\n'){
+      break;
+    } else {
+      headerBuffer[i] = tmp[0];
+      old = tmp[0];
+    }
+    i++;
+  };
+  http_headers *k = parseHttpHeaders(headerBuffer);
+  // cout<<"Header buffer "<<headerBuffer;
+  // cout<<endl<<"Content length is "<<k->contentLength;
+  long len = 0;
   char buffer[256];
+  long flen = k->contentLength;
   do {
     bzero(buffer,256);    
-    n = recv(fd,buffer,255, 0);
+    int rd ;
+    if (len+255 < flen){
+      rd = 255;
+    } else if(len < flen ) {
+      rd = flen - len;
+    }
+
+    n = recv(fd,buffer,rd, 0);
+    len +=n;
     cb(buffer,fd);
+    if (flen != 0 && flen <= len){
+      break;
+    }
   } while (n != 0);
   return str;
-}
+};
+
 char* readFromSocketS(int fd,int &n) {
   char *str = new char[1];
   char buffer[256];
@@ -128,6 +180,7 @@ void log(int level,int nargs , ...) {
 
 struct client_args {
   char *host , *path;
+  bool isTime;
   int port,protocol;
 };
 
@@ -139,7 +192,8 @@ client_args getClientArgs(int argc , char** argv){
   char* host , *path ,*tmp2;  
   int n,tmp,c,protocol;
   int port = 1120; // Defauly port
-  while ((c = getopt (argc, argv, "h:f:p:r:")) != -1) {
+  client_args args ;
+  while ((c = getopt (argc, argv, "h:f:p:r:t")) != -1) {
     switch(c) {
     case 'p' : 
       tmp = atoi(optarg);
@@ -172,6 +226,9 @@ client_args getClientArgs(int argc , char** argv){
       strcpy(path , optarg);
       cout<<"File is :  "<< path << endl;
       break;
+    case 't':
+      args.isTime = true;
+      break;
     case '?':
       if (optopt == 'p')
         cout<<"Enter port info";
@@ -180,7 +237,6 @@ client_args getClientArgs(int argc , char** argv){
       cout<<"Option is "<<c <<endl;
     };      
   };
-  client_args args ;
   args.host = host ;
   args.path = path;
   args.port = port;

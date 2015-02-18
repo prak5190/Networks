@@ -12,6 +12,7 @@ struct thread_args {
   int sfd;
 };
 static bool justDisplayTime = false;
+static bool isPersistent = false;
 // The broken pipe error
 void signal_callback_handler(int signum){
   printf("Caught signal SIGPIPE %d\n",signum);
@@ -59,14 +60,22 @@ int create_server(int port) {
 
     struct sockaddr_in cli_addr;
     socklen_t clilen = (socklen_t)sizeof(cli_addr);
-
     int newsockfd = accept(sfd, (struct sockaddr *)&cli_addr, &clilen);
+    // struct timeval timeout;      
+    // timeout.tv_sec = 10;
+    // timeout.tv_usec = 0;
+    // if (setsockopt (newsockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,
+    //                 sizeof(timeout)) < 0)
+    //   error("setsockopt failed\n");
+
+    // if (setsockopt (newsockfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,
+    //                 sizeof(timeout)) < 0)
+    //   error("setsockopt failed\n");
 
     args->sfd = newsockfd;
     if(pthread_create(&thread , NULL , handle_connection, args)){
       cout<<"Thread created";
     };
-    //handle_connection(sfd);
   };
   
   //  exit(1);
@@ -105,28 +114,40 @@ void* handle_connection(void *args) {
       char respath[] = "www/";
       strcat(respath,path);
       //cout<<endl<<"Thread processing file "<<respath;
-      int m = getFile(respath , writeToClient , newsockfd);
-      if (m < 0){     
-        writeToClient("HTTP/1.0 404 Not Found\n Content-type: text/html \n\n <html><body><h2>Not found </h2></body></html>",newsockfd); 
+      int m = getFile(respath , writeToClient , newsockfd);      
+      if(m<0){
+        char msg[100];
+        const char* im = "<html><body><h2>Not found </h2></body></html>";
+        int siz = strlen(im);
+        sprintf(msg,"HTTP/1.1 400 Not Found\nContent-Length:%d\nServer: TestServer \nContent-Type:text\n\n",siz);
+        writeToClient(msg,newsockfd); 
+        writeToClient(im,newsockfd); 
       }
-    } else if (!path || strcmp(path,"/") == 0) {
-      /* Write a response to the client */
-      writeToClient("Hi , Type a path to a file in the www folder if you know one :)",newsockfd);
+      cout<<"Matches no if ";
     } else {
-      writeToClient("HTTP/1.0 404 Not Found\n Content-type: text/html \n\n <html><body><h2>Not found </h2></body></html>",newsockfd);
-    }
-         
+      /* Write a response to the client */
+      char msg2[100];
+      const char* im2 = "Hi , Type a path to a file in the www folder if you know one :)";
+      int siz2 = strlen(im2);
+      sprintf(msg2,"HTTP/1.1 200 OK\nContent-Length:%d \nServer: TestServer \nContent-Type:text\n\n",siz2);
+      writeToClient(msg2,newsockfd); 
+      writeToClient(im2,newsockfd);       
+    }  
     if (n < 0) {
       error("ERROR writing to socket");
     }       
-    close(newsockfd);
+    if (!isPersistent){
+      close(newsockfd);
+    }
   }
   //cout<<"Writing finished ";
   end = clock();
   cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-  cout<<endl<<"Time taken "<<cpu_time_used<<endl;
+  //cout<<endl<<"Time taken "<<cpu_time_used<<endl;
   cout.flush();
-  shutdown(newsockfd,2);
+  if (!isPersistent){
+    shutdown(newsockfd,2);
+  }
 }
 
 void shutdown(int dummy=0) {
@@ -146,7 +167,7 @@ int print(const char* str) {
 // Creating client
 int main (int argc ,char** argv) {  
   int c,port = 1120,tmp ;
-  while ((c = getopt (argc, argv, "p:t")) != -1) {
+  while ((c = getopt (argc, argv, "p:tr")) != -1) {
     switch(c) {
     case 'p' : 
       tmp = atoi(optarg);
@@ -157,7 +178,11 @@ int main (int argc ,char** argv) {
       break;
     case 't':
       justDisplayTime = true;
-    case '?':
+      break;
+    case 'r':
+      isPersistent = true ;
+      break;
+    case '?':     
       if (optopt == 'p')
         cout<<"Enter port info";
       break;

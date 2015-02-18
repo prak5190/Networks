@@ -1,5 +1,5 @@
 #include "common.cpp"
-// Returns a chunk of the file 
+#include <sys/stat.h>
 #ifndef __FileHandler__
 #define __FileHandler__ 1 
 
@@ -12,6 +12,12 @@ int getFile(const char* fpath , int (*cb)(const char*,int fd) , int sfd) {
   } else {
     char * line = NULL;
     size_t len = 0;
+    struct stat st;
+    stat(fpath, &st);
+    int size = st.st_size;
+    char s[100];
+    sprintf(s,"HTTP/1.1 200 OK\nContent-Length:%d \nServer: TestServer \nContent-Type:text\n\n",size);
+    cb(s,sfd);
     while(getline(&line, &len, fd) != -1) {
       //cout<<line<<endl;      
       cb(line,sfd);

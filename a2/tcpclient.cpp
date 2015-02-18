@@ -18,12 +18,11 @@
 using namespace std; 
 clock_t start, end;
 double cpu_time_used;
+bool static isTime = false ;
 void ondata (const char* data , int fd) {
-  cout<<data;
-  if(strlen(data) == 0){
-    end = clock();
-    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    cout<<endl<<"Time taken "<<cpu_time_used<<endl;
+  if (!isTime)
+    cout<<data;
+  if(strlen(data) == 0) {
     close(fd);
   };
 };
@@ -63,7 +62,7 @@ int client (int portno , const char* host , const char* path ,int protocol) {
   char pro[10];
   sprintf(pro,proto,protocol);
   sprintf(message,HTTP_HEADER ,path, pro , host);
-  cout<<"Message sent to server " <<message;
+  // cout<<"Message sent to server " <<message;
   /* Send message to the server */
   n = send(sockfd,message,strlen(message),0);
    
@@ -88,16 +87,19 @@ void shutdown(int dummy=0) {
     exit(1);
 };
 
-
 // Creating client
 int main (int argc ,char** argv) {  
   signal(SIGSEGV, unknownexit);
   if(argc > 1) {
     client_args args = getClientArgs(argc , argv);
     signal(SIGINT, shutdown);
+    isTime = args.isTime;    
     client(args.port , args.host , args.path,args.protocol);
   } else {
     cout<<"Please enter port info -p , host info -h and file info -f and protocol -r 0 for persistent and 1 for non persistent ";
   }
+  end = clock();
+  cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+  cout<<endl<<"Time taken "<<cpu_time_used<<endl;
   return 0;
 }

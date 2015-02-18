@@ -67,10 +67,10 @@ int client (int portno , const char* host , const char* path ) {
         break;
     };
   }
-  cout<<endl<<"Connection closed , Total Size is : "<<totalSize;
+  cout<<endl<<"Connection closed , \n Total Size is : "<<totalSize;
   end = clock();
   cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-  cout<<endl<<"Time taken "<<cpu_time_used<<endl;
+  cout<<" Time taken "<<cpu_time_used<<endl;
   cout.flush();
   if (n < 0)    {
     error("ERROR reading from socket");
