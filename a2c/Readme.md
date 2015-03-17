@@ -1,13 +1,4 @@
-## Readme
-
-Use `make` to create the 4 files
-
-- tcpserver
-- tcpclient
-- udpserver
-- udpclient
-
-#### TCP Server
+## TCP Server
 Usage : 
 
     ./tcpserver -p 1124
@@ -26,7 +17,7 @@ Usage :
         ./tcpclient -p 1124 -h localhost -f /file -t
 
 
-#### UDP Server
+## UDP Server
 Usage :
 
     ./udpserver -p 1112
@@ -36,7 +27,7 @@ Usage :
 - Client displays size of request 
 - Server indicates end of transmission by sending a packet of size 0
 
-#### Threads
+## Threads
 
 - TCP server is multi threaded - can handle simultaneous requests
 - Thread handling is not that great - Memory leaks may be present. Currently threads are created and assumption is that they exit when socket finishes.

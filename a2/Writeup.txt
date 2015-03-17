@@ -1,0 +1,43 @@
+Implemented persistent connection in the following way :
+- Set a length 
+- Keep the connection open with timeout of 10 seconds - So connection gets reused if request is made in the timespan.
+
+
+
+Persistent vs Non-Persistent TCP connections :
+Test conditions
+Recorded the time using time.h. Ran the tcpclient
+Using the following command 
+
+for i in `seq 1 10` :
+do 
+    ./tcpclient -p 2000 -h localhost -f /file -t 
+done > pe
+
+
+
+
+
+Packet loss in UDP :
+No packet loss is observed when transferring data of small size , i.e < 20 kilobytes .
+But as packet size increases, greater packet loss is observed. When testing with a 2 Mb file a discernible loss occurs. The time taken to transfer it in 10 tries is as follows : 
+
+Total Size is : 2014434 Time taken 0.305561
+Total Size is : 1987619 Time taken 0.259942
+Total Size is : 2014434 Time taken 0.303734
+Total Size is : 2014434 Time taken 0.298796
+Total Size is : 2014434 Time taken 0.403613
+Total Size is : 2014434 Time taken 0.339462
+Total Size is : 2014434 Time taken 0.360929
+Total Size is : 2014434 Time taken 0.351598
+Total Size is : 2014434 Time taken 0.372711
+Total Size is : 2014434 Time taken 0.371817
+Total Size is : 1998319 Time taken 0.370614
+Total Size is : 2012293 Time taken 0.310553
+Total Size is : 2014434 Time taken 0.28811
+
+$ ls -l | grep file
+-rwxrwxrwx 1 root root 2014434 Feb 16 20:49 file
+
+The actual size is 2014443 bytes, so it is pretty clear that packet loss occurs.
+

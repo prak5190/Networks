@@ -18,3 +18,4 @@ all :
 	./a.out --array 100 --file "test.txt"
 	@echo 'Running with link - File'
 	./a.out --link --file "test.txt"
+	

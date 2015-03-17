@@ -1,0 +1,166 @@
+Binding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connectingBinding port to 1124
+Host is :  localhost
+File is :  /file
+Error ERROR connecting

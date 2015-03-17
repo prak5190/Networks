@@ -1,0 +1,45 @@
+Binding port to 1125
+Host is :  localhost
+File is :  /file
+
+Time taken 0.133096
+Time taken 0.215962
+Time taken 0.131388
+Time taken 0.161088
+Time taken 0.193296
+Time taken 0.141694
+Time taken 0.178694
+Time taken 0.214977
+Time taken 0.24357
+Time taken 0.15778
+Time taken 0.161689
+
+
+
+For requesting 1,2,..and get 10 files
+
+
+
+real	0m0.217s user	0m0.018s sys	0m0.178s
+real	0m0.581s user	0m0.044s sys	0m0.467s
+real	0m0.873s user	0m0.069s sys	0m0.714s
+real	0m1.030s user	0m0.085s sys	0m0.832s
+real	0m1.435s user	0m0.115s sys	0m1.134s
+real	0m1.879s user	0m0.147s sys	0m1.490s
+real	0m2.001s user	0m0.163s sys	0m1.622s
+real	0m2.501s user	0m0.199s sys	0m2.040s
+real	0m2.864s user	0m0.226s sys	0m2.231s
+real	0m3.157s user	0m0.248s sys	0m2.488s
+
+
+Real     User     Sys  
+0m0.217s 0m0.018s 0m0.178s
+0m0.581s 0m0.044s 0m0.467s
+0m0.873s 0m0.069s 0m0.714s
+0m1.030s 0m0.085s 0m0.832s
+0m1.435s 0m0.115s 0m1.134s
+0m1.879s 0m0.147s 0m1.490s
+0m2.001s 0m0.163s 0m1.622s
+0m2.501s 0m0.199s 0m2.040s
+0m2.864s 0m0.226s 0m2.231s
+0m3.157s 0m0.248s 0m2.488s
