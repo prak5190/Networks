@@ -32,7 +32,7 @@
 * Latency using sleep
 
 
-## Structure
+#### Structure
 
 * Initial Header design 
 * Parse headers - regex.cpp [ not really - no strings present , just count and do bit manipulation ]
@@ -43,5 +43,10 @@
 * Slow start
 * AIMD
 * Loss and delay
+
+
+
+
+
 
 

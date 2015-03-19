@@ -1,7 +1,6 @@
 #ifndef __COMMON__
 #define __COMMON__ 1 
 #include <iostream>
-#include "header.cpp"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -14,9 +13,16 @@
 #include <cstdarg>
 #include <error.h>
 #include <time.h>
+// For sockaddr_in
+#include <netinet/in.h>
+// For port - htons
+#include <arpa/inet.h>
+// For gethostbyname
+#include <netdb.h>
+#include <string.h>
+#include <pthread.h>
+#include "header.cpp"
 #include "fileHandler.cpp"
-
-using namespace std; 
 
 #endif
 

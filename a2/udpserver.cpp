@@ -100,24 +100,24 @@ int create_server(int port) {
 // Creating client
 int main (int argc ,char** argv) {  
  int c,port = 2222,tmp ;
-  while ((c = getopt (argc, argv, "p:")) != -1) {
-    switch(c) {
-    case 'p' : 
-      tmp = atoi(optarg);
-      if(tmp != 0) {
-        port = tmp;
-        cout<<"Binding port to "<<port << endl;
-      }
-      break;
-    case '?':
-      if (optopt == 'p')
-        cout<<"Enter port info";
-      break;
-    default:
-      cout<<"Option is "<<c <<endl;
-    };
+ while ((c = getopt (argc, argv, "p:")) != -1) {
+   switch(c) {
+   case 'p' : 
+     tmp = atoi(optarg);
+     if(tmp != 0) {
+       port = tmp;
+       cout<<"Binding port to "<<port << endl;
+     }
+     break;
+   case '?':
+     if (optopt == 'p')
+       cout<<"Enter port info";
+     break;
+   default:
+     cout<<"Option is "<<c <<endl;
+   };
       
-  };
-  create_server(port);
-  return 0;
+ };
+ create_server(port);
+ return 0;
 }
