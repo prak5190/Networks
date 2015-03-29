@@ -2,7 +2,6 @@
 #include "common.cpp"
 #include <string.h>
 #include <string>
-
 #ifndef __HEADER_CPP__
 #define __HEADER_CPP__ 1 
 using namespace std;
@@ -31,19 +30,20 @@ struct fileInfo {
   uint64_t size;
 };
 
-
-/** Just a test **/
-int main2 (int ccot, char ** asd) {
-  udp_header kk;
-  kk.ttl = 1222;
-  char *mem = new char[sizeof(udp_header)];
-  memcpy(mem, &kk , sizeof(kk));
-  udp_header ll ; 
-  memcpy(&ll, mem , sizeof(kk));
-  cout<<"TTL Value is " <<ll.ttl;
-  return 0;
-}
-
+struct appglobals {
+  int socket;
+  // This mutex tells the sender to wait when window is filled
+  pthread_mutex_t mut     = PTHREAD_MUTEX_INITIALIZER;
+  pthread_cond_t  cond   = PTHREAD_COND_INITIALIZER;
+  long window_size;
+  int recieve_port;
+};
+struct thread_args {
+  appglobals* app;
+  // Sending port
+  int port;
+};
 
 #endif
+
 

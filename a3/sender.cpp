@@ -11,24 +11,9 @@ int writeToUdpClient(const char* buf) {
   char  packet[1500];
   memcpy(packet, &k , sizeof(udp_header));
   memcpy(&packet[sizeof(udp_header)] , buf , 1500 - sizeof(udp_header));
-  int n = sendto(w_socket,packet , 1500, 0, w_addr,sizeof(sockaddr_in)); 
+  int n = sendto(w_socket,packet , 1500, 0, w_addr,sizeof(sockaddr_in));   
   return n;
 };
-
-int sendToClient(sockaddr_in clientaddr) {
-  int sfd = socket(AF_INET , SOCK_DGRAM , 0);
-  // struct sockaddr_in *my_addr, *peer_addr;
-  /* Initialize socket structure */
-  char respath[] = "www/file";
-  //strcat(respath,path);
-  socklen_t clientlen = sizeof(clientaddr);
-  w_socket = sfd;
-  w_addr = (struct sockaddr*) &clientaddr;
-  int m = getFile(respath , writeToUdpClient , 1500 - sizeof(udp_header));
-  if (m < 0) {
-    cout<<"failed ";
-  }
-}
 
 // int main (int argc , char** argv) {
 //   struct sockaddr_in serv_addr;
@@ -43,3 +28,26 @@ int sendToClient(sockaddr_in clientaddr) {
 //   sendToClient(serv_addr);
 //   return 0;
 // }
+ 
+int windowCounter = 0;
+int sendToClient(appglobals *app,sockaddr_in clientaddr,const char *respath , long start , long offset ,int (*cb) (int)) {
+  int sfd = app->socket;
+  // struct sockaddr_in *my_addr, *peer_addr;
+  /* Initialize socket structure */
+  //strcat(respath,path);
+  socklen_t clientlen = sizeof(clientaddr);
+  w_socket = sfd;
+  w_addr = (struct sockaddr*) &clientaddr;
+  int m = getFile(respath , writeToUdpClient , 1500 - sizeof(udp_header) ,start, offset , cb);
+  if (m < 0) {
+    cout<<"failed ";
+  }
+}
+
+int sendAck (int sfd ,sockaddr* addr, udp_header header ,socklen_t size) {
+  char  packet[1500];
+  memcpy(packet, &header , sizeof(udp_header));  
+  // Send the ack
+  return sendto(sfd,packet , 1500, 0, addr ,size);
+}
+
