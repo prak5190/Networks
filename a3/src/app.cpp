@@ -5,11 +5,9 @@ using std::endl;
 int initSocket();
 void initApp(appglobals *app , int port) {
   int s = initSocket();
-  // Stop and wait
-  int window_size = 1;
   app->socket = s;
+  app->max_window_size = 10;
   app->recieve_port = port;
-  app->window_size = window_size;
 };
 
 int main (int argc , char** argv) {

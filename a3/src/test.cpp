@@ -84,11 +84,25 @@ int print(unique_ptr<func_args> buf) {
   std::cout << "Printing" << std::endl;
   return 0;
 }
-
+bool isTrueAtPos(char a , int pos) {
+  // Return true if pos is true
+  
+}
+char setBoolAtPos(char a ,int pos, bool b) {
+  return a;
+}
 int main(int argus , char **argv){
   // std::unique_ptr<File_stats> ret(new File_stats());
   // ret->seq = 100;
-  testSerialization();
+  //testSerialization();
+  int error ;
+  do {
+    char a = (int) 0;
+    std::cout << (int) a  << std::endl;
+    error = senderState.waitTime(1000);
+    std::cout << error << ETIMEDOUT<< std::endl;
+  }  while (error == ETIMEDOUT) ;
+  std::cout << "hello" << std::endl;
   //getFile("test.cpp",200, 0 ,-1 ,print, NULL);
   // Test stackoverflow 
   // for(int i=0;i < 10000 ;i++) {

@@ -11,6 +11,7 @@ struct File_stats {
   long totalSize;
   long start , offset , buffer_size;
   bool eof;
+  bool isFstat;
   ~File_stats() {
     delete data;
     delete fpath;
@@ -36,9 +37,21 @@ int getFile(const char* fpath,int buffer_size, long start , long offset ,int (*c
     if (offset < 0)
       offset = -1; // This points to avoid offset
 
+    // Send file stat
+    File_stats *ret = new File_stats();
+    ret->fpath = fpath; ret->buffer_size = buffer_size;
+    ret->start = start; ret->offset = offset;
+    ret->totalSize = fileSize;
+    ret->isFstat = true;
+    std::unique_ptr<func_args> toCb1(new func_args());
+    toCb1->forw = forw;    
+    toCb1->func = ret;
+    cb(std::move(toCb1));
+
     long chunk_size = offset - start;
     long readSize = 1;
     int seq = 0;    
+    long goback;
     while (offset == -1 || chunk_size > 0) {
       if (offset== -1 || chunk_size >= buffer_size) 
         readSize = buffer_size;
@@ -52,14 +65,22 @@ int getFile(const char* fpath,int buffer_size, long start , long offset ,int (*c
       ret->chunk_size = readSize;
       ret->seq = seq;
       ret->totalSize = fileSize;
-
+      
       std::unique_ptr<func_args> toCb(new func_args());
       toCb->forw = forw;
       if(fread(buffer,readSize, 1, fd) != 0) {
         const char* data =  (string(buffer).c_str());
         ret->data = data ;
         toCb->func = ret;
-        cb(std::move(toCb));
+        goback = cb(std::move(toCb));
+        if (goback >= 0) {
+          // Then go to that position           
+          fseek(fd ,goback * buffer_size ,SEEK_SET);
+          seq = goback;
+          // Surely some bug here - but chunk_size is not used 
+          chunk_size = goback * buffer_size;
+          continue;
+        }
         seq++;
         memset(buffer, 0 , sizeof(buffer));
         chunk_size -= readSize;
@@ -67,7 +88,14 @@ int getFile(const char* fpath,int buffer_size, long start , long offset ,int (*c
         ret->eof = true;
         toCb->func = ret;
         // Pass eof 
-        cb(move(toCb));
+        goback = cb(move(toCb));
+        if (goback >= 0) {
+          // Then go to that position           
+          fseek(fd ,goback * buffer_size ,SEEK_SET);
+          seq = goback;
+          chunk_size = goback * buffer_size;
+          continue;
+        }
         // Reached end of file
         break;
       }

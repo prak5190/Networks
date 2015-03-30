@@ -17,6 +17,7 @@
 #include <cstdarg>
 #include <error.h>
 #include <time.h>
+#include <bitset>
 // For sockaddr_in
 #include <netinet/in.h>
 // For port - htons
@@ -25,6 +26,7 @@
 #include <netdb.h>
 #include <string.h>
 #include <pthread.h>
+#include "timeutil.cpp"
 #include "header.cpp"
 #include "fileHandler.cpp"
 #endif
