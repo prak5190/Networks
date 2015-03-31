@@ -121,12 +121,58 @@ void testMap() {
     std::cout << search->second << std::endl;
   }
 }
+
+void testFileCopy() {
+  char buffer[1500];
+  int readpacks;
+  long size = getFileSize("../www/a.mp3");  
+  // while(getPacketFile("../www/tcpserver",buffer,-1,sizeof(buffer),false) != -1) {
+  //   assembleFile("temp",-1 , buffer ,sizeof(buffer), false);    
+  //   bzero(&buffer,sizeof(buffer));
+  // }
+  while (size > 0) {
+    long bufSize = sizeof(buffer);
+    if (size < bufSize) {
+      bufSize = size;
+    }
+    if (getPacketFile("../www/a.mp3",buffer,-1,bufSize,false) != -1) {
+      std::cout << " A " << sizeof(buffer) << std::endl;
+      assembleFile("temp2",-1 , buffer ,bufSize, false);    
+      bzero(&buffer,sizeof(buffer));
+    }
+    size -= bufSize;
+  }
+  
+  std::cout << sizeof(buffer) << std::endl;
+  closeFile("temp");
+}
+void testFileInfo() {
+  string name = "../www/a.mp3";
+  long size = getFileSize(name);
+  char buffer[PACKET_SIZE], data[PACKET_SIZE];
+  udp_header header , n;
+  header.hasFileInfo = true;
+  fileInfo finfo;
+  fileInfo *nf = new fileInfo();
+  finfo.size = getFileSize(name);
+  finfo.filename = "Something";
+  createRequestPacket(buffer, &header, &finfo);
+  readPacket(buffer , &n ,data);
+  std::cout << "Has info" << n.hasFileInfo << std::endl;
+  //memcpy(nf, data , sizeof(fileInfo));
+  getFileInfoFromData(data,nf);
+  std::cout << "Finfo " << nf->size << std::endl;
+}
 int main(int argus , char **argv){
+  testFileInfo();
+  return 0;
+}
+
   // for(int i = 0 ; i < 1000; i++) {
   //   assembleFile("asd", i , "as",false);
   // }
 
-  assembleFile("aq2", 0 ,(char*)"dassd \ne1asddddddddddddd2312 asdasd",true);
+  //  assembleFile("aq2", 0 ,(char*)"dassd \ne1asddddddddddddd2312 asdasd",true);
 
   //testRttCaclulation();
   // std::unique_ptr<File_stats> ret(new File_stats());
@@ -158,5 +204,3 @@ int main(int argus , char **argv){
   // args = new thread_args();
   // std::cout << args->ip << std::endl;
   //getSocketAddr("localhost",9000);
-  return 0;
-}

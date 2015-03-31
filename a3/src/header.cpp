@@ -26,7 +26,7 @@ struct udp_header {
 };
 
 struct fileInfo { 
-  string filename;
+  char filename[100];
   uint64_t size;
 };
 // Pthread stuff
@@ -55,11 +55,11 @@ int thread_timed_wait (pthread_mutex_t &mut ,pthread_cond_t &cond ,int mseconds)
 struct appglobals {
   int socket;
   // This mutex tells the sender to wait when window is filled
-  pthread_mutex_t mut     = PTHREAD_MUTEX_INITIALIZER;
-  pthread_cond_t  cond   = PTHREAD_COND_INITIALIZER;
+  pthread_mutex_t mut ; 
+  pthread_cond_t  cond ;
   long max_window_size;
   int recieve_port;
-  bool isDupElseSel = true;  
+  bool isDupElseSel;
 };
 struct SenderState {
   long windowSize, seqNum , expSeqNum = 999999999 , lastAckedNum, windowCounter;
@@ -78,7 +78,7 @@ struct SenderState {
   void resume() {
     thread_resume(this->mut, this->cond);
   }
-  int waitTime(int ms) {
+  int waitTime(long ms) {
     return thread_timed_wait(this->mut,this->cond,ms);
   }
   void setTime() {
@@ -120,7 +120,7 @@ struct SenderState {
 } senderState;
 struct RecieverState {
   bool isRecieving;
-  long windowSize, lastRecievedSeq , seqBase , seqMax,windowCounter;
+  long windowSize, lastRecievedSeq , seqBase , seqMax,windowCounter , fileSize;
   timespec  *lastMsgTime; 
   // Rtt in milliseconds
   long rtt = 0;
@@ -217,6 +217,7 @@ void readPacket(char* buffer , udp_header *header , char* data) {
     return;
   size_t sz = sizeof(udp_header);
   memcpy(header , buffer , sz);
+  std::cout << "Size " << sz << std::endl;
   memcpy(data , &buffer[sz]  , PACKET_SIZE - sz);
   // if (&buffer[sz] != NULL) {
   //   data = new char[strlen(&buffer[sz])];
@@ -224,11 +225,22 @@ void readPacket(char* buffer , udp_header *header , char* data) {
   //   std::cout << "data " << data << std::endl;
   // }
 };
+void readPacket(char* buffer , udp_header *header , fileInfo *data) {
+  if (buffer == NULL)
+    return;
+  size_t sz = sizeof(udp_header);
+  memcpy(header , buffer , sz);
+  memcpy(data , &buffer[sz]  , sizeof(fileInfo));
+  // if (&buffer[sz] != NULL) {
+  //   data = new char[strlen(&buffer[sz])];
+  //   strcpy(data,&buffer[sz]);
+  //   std::cout << "data " << data << std::endl;
+  // }
+};
 
-std::unique_ptr<fileInfo> getFileInfoFromData(char* data) {
-  std::unique_ptr<fileInfo> f(new fileInfo());
-  memcpy(f.get() , data , sizeof(fileInfo));  
-  return std::move(f);
+
+void getFileInfoFromData(char* data, fileInfo *f) {
+  memcpy(f, data , sizeof(fileInfo));  
 }
 void createRequestPacket(char* buffer, udp_header *header, fileInfo *finfo) {
   size_t sz = sizeof(udp_header);

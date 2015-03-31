@@ -6,6 +6,9 @@ int initSocket();
 void initApp(appglobals *app , int port) {
   int s = initSocket();
   app->socket = s;
+  app->mut     = PTHREAD_MUTEX_INITIALIZER;
+  app->cond   = PTHREAD_COND_INITIALIZER;
+  app->isDupElseSel = true;
   app->max_window_size = 100;
   app->recieve_port = port;
 };

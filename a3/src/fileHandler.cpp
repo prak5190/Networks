@@ -18,10 +18,20 @@ struct File_stats {
   }
 };
 
-
 std::unordered_map<string,FILE*> FileDescriptorMap;
+int closeFile(string name) {
+ auto search = FileDescriptorMap.find(name);
+  FILE* fd = NULL;
+  bool isMapped = false;
+  if (search != FileDescriptorMap.end()) {
+    fd = search->second;
+    fclose(fd);
+    // Delete from map
+    FileDescriptorMap.erase(name);
+  }
+}
 // Will pad data to the chunksize 
-int assembleFile (string name,int start, char* data , bool isLast) {
+int assembleFile (string name,int start, char* data , long size , bool isLast) {
   using namespace std;
   auto search = FileDescriptorMap.find(name);
   FILE* fd = NULL;
@@ -31,14 +41,13 @@ int assembleFile (string name,int start, char* data , bool isLast) {
     isMapped = true;
   } else {
     // Open the file -- Create if not present
-    fd = std::fopen(name.c_str(), "w+");
+    fd = std::fopen(name.c_str(), "wb");
     FileDescriptorMap.insert(std::make_pair(name , fd));
   }
-  if (start != -1 || ftell(fd) != start) {
+  if (start < 0 || ftell(fd) != start) {
     fseek(fd , start,SEEK_SET);
   };
-
-  if (fwrite(data,sizeof(char),sizeof(data), fd) != 0){
+  if (fwrite(data,sizeof(char),size, fd) != 0){
     // File writing done
     //std::cout << "File writing done " << std::endl;
   }
@@ -51,6 +60,60 @@ int assembleFile (string name,int start, char* data , bool isLast) {
   }
   return 0;
 };
+
+std::unordered_map<string,FILE*> RFileDescriptorMap;
+int getFileSize(string name) {
+  auto search = RFileDescriptorMap.find(name);
+  FILE* fd = NULL;
+  bool isMapped = false;
+  if (search != RFileDescriptorMap.end()) {
+    fd = search->second;
+    isMapped = true;
+  } else {
+    // Open the file -- Create if not present
+    fd = std::fopen(name.c_str(), "rb");
+    RFileDescriptorMap.insert(std::make_pair(name , fd));
+  }
+  struct stat fileStat;
+  fstat(fileno(fd) , &fileStat);
+  return fileStat.st_size;
+}
+
+int getPacketFile (string name,char *data, int start, long offset, bool isLast) {
+  using namespace std;
+  int retVal = 0;
+  auto search = RFileDescriptorMap.find(name);
+  FILE* fd = NULL;
+  bool isMapped = false;
+  if (search != RFileDescriptorMap.end()) {
+    fd = search->second;
+    isMapped = true;
+  } else {
+    // Open the file -- Create if not present
+    fd = std::fopen(name.c_str(), "rb");
+    RFileDescriptorMap.insert(std::make_pair(name , fd));
+  }
+  if (start != -1 || ftell(fd) != start) {
+    fseek(fd , start,SEEK_SET);
+  };
+  if (!feof(fd)) {
+    fread(data,sizeof(char),offset, fd);
+    // File writing done
+    //std::cout << "File writing done " << std::endl;
+  } else {
+    // std::cout << "EOF" << data << std::endl;
+    // std::cout << "********" << std::endl;
+    // EOF
+    retVal = -1;
+  }
+  if (isLast) {
+    fclose(fd);
+    // Delete from map
+    RFileDescriptorMap.erase(name);
+  }
+  return retVal;
+};
+
 int getFile(const char* fpath,int buffer_size, long start , long offset ,int (*cb) (std::unique_ptr<func_args>), void* forw) {
   using namespace std;
   FILE* fd = NULL ;
