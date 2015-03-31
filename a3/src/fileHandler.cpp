@@ -100,7 +100,9 @@ int getPacketFile (string name,char *data, int start, long offset, bool isLast) 
     fread(data,sizeof(char),offset, fd);
     // File writing done
     //std::cout << "File writing done " << std::endl;
-  } else {
+  } 
+  // If feof now 
+  if (feof(fd)) {
     // std::cout << "EOF" << data << std::endl;
     // std::cout << "********" << std::endl;
     // EOF

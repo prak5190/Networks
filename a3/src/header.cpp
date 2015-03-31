@@ -122,8 +122,10 @@ struct RecieverState {
   bool isRecieving;
   long windowSize, lastRecievedSeq , seqBase , seqMax,windowCounter , fileSize;
   timespec  *lastMsgTime; 
+  string filename;
   // Rtt in milliseconds
   long rtt = 0;
+  long totalPackets;
 
   // Address of last reciever 
   sockaddr_in  recv_addr;
@@ -189,6 +191,7 @@ struct thread_args {
   string filename;
 };
 #define PACKET_SIZE 1500
+int DATA_SIZE = PACKET_SIZE - sizeof(udp_header);
 appglobals app;
 // Socket helpers !!!!!!!!!!!!
 int bindUdpSocket(int port , int s) {
@@ -217,13 +220,7 @@ void readPacket(char* buffer , udp_header *header , char* data) {
     return;
   size_t sz = sizeof(udp_header);
   memcpy(header , buffer , sz);
-  std::cout << "Size " << sz << std::endl;
   memcpy(data , &buffer[sz]  , PACKET_SIZE - sz);
-  // if (&buffer[sz] != NULL) {
-  //   data = new char[strlen(&buffer[sz])];
-  //   strcpy(data,&buffer[sz]);
-  //   std::cout << "data " << data << std::endl;
-  // }
 };
 void readPacket(char* buffer , udp_header *header , fileInfo *data) {
   if (buffer == NULL)
@@ -231,11 +228,6 @@ void readPacket(char* buffer , udp_header *header , fileInfo *data) {
   size_t sz = sizeof(udp_header);
   memcpy(header , buffer , sz);
   memcpy(data , &buffer[sz]  , sizeof(fileInfo));
-  // if (&buffer[sz] != NULL) {
-  //   data = new char[strlen(&buffer[sz])];
-  //   strcpy(data,&buffer[sz]);
-  //   std::cout << "data " << data << std::endl;
-  // }
 };
 
 

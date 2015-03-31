@@ -25,17 +25,12 @@ int sendFileRequest (const char* fname , sockaddr* addr, socklen_t size) {
 }
 
 void handleRecFStat (udp_header header , char* data , sockaddr_in recv_addr , socklen_t recv_len) {
-  fileInfo fs;// = new fileInfo();
-  std::cout << "Data " << data << std::endl;
+  fileInfo fs; // = new fileInfo();  
+  memcpy(&fs, data , sizeof(fileInfo));   
   
-  memcpy(&fs, data , sizeof(fileInfo));  
-  //getFileInfoFromData(data,fs); 
-  std::cout << "File to be recieved " << fs.filename << std::endl;
-  std::cout << "FS Size " << fs.size << std::endl;
-  sleep(5);
-
-  
-  //recieverState.fileSize = fs->size;
+  recieverState.filename = string(fs.filename);
+  recieverState.fileSize = fs.size;
+  recieverState.totalPackets = fs.size / DATA_SIZE;
   recieverState.windowCounter = 0;
   recieverState.windowSize = 1;
   recieverState.lastRecievedSeq = -1;
@@ -44,18 +39,17 @@ void handleRecFStat (udp_header header , char* data , sockaddr_in recv_addr , so
   // Any non-0 number indicates ack for fileInfo
   k->ack = 1;
   k->hasFileInfo = true;
+  sleep(2);
   sendHeader(std::move(k),(struct sockaddr *) &recv_addr ,recv_len);
-
 }
 
 void handleSenFStat (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv_addr , socklen_t recv_len) {
   // Thanks for the ack - now senderThread moves on        
   // Acknowledge the ack
   std::unique_ptr<udp_header>k(new udp_header());
-  // Any non-0 number indicates ack for fileInfo
-  k->ack = -1;
-  k->hasFileInfo = true;
-  sendHeader(std::move(k),(struct sockaddr *) &recv_addr ,recv_len);
+  // k->ack = -1;
+  // k->hasFileInfo = true;
+  // sendHeader(std::move(k),(struct sockaddr *) &recv_addr ,recv_len);
   // TODO need to replace with Seq_max or something
   senderState.expSeqNum = 9999999;
   senderState.windowCounter = 0;
@@ -64,27 +58,36 @@ void handleSenFStat (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
   senderState.windowSize = 1;
   senderState.resume();
 }
-void handleReciever (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv_addr , socklen_t recv_len) {
-  // Anything with ack = 0 mean new data for reciever       
+void handleReciever (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv_addr , socklen_t recv_len) { 
+  std::cout << "Header seq " << header.seq << " Next " << recieverState.lastRecievedSeq + 1<<std::endl;
   recieverState.windowSize = header.window_size;
-  recieverState.windowCounter--;            
+  recieverState.windowCounter--;
   if (header.seq == recieverState.lastRecievedSeq + 1) {
-    // Recieved pakcet properly - lets just increase window size 
-    recieverState.lastRecievedSeq = header.seq;
-    std::cout << "Sequnce no." << header.seq << std::endl;
-    if (data != NULL) {
-      // Lets write to a temp file 
-      //assembleFile("temp",-1,data,false);
-      //std::cout << data.get() << std::endl;
-    };
-    recieverState.windowCounter++;
-    // Send out an Acknowledge when counter > win Size/2
-    if (recieverState.windowCounter > recieverState.windowSize / 2) {
-      // Send an ack for half the window size
-      std::unique_ptr<udp_header>k(new udp_header());
-      k->ack = 2;
-      k->seq = recieverState.lastRecievedSeq + 1;
-      sendHeader(std::move(k),(struct sockaddr *) &recv_addr ,recv_len);
+    int writeSize = DATA_SIZE ;
+    if (recieverState.fileSize < DATA_SIZE)
+      writeSize = recieverState.fileSize;
+    if (recieverState.totalPackets >= 0) {
+      recieverState.totalPackets--;
+      // Recieved pakcet properly - lets just increase window size 
+      recieverState.lastRecievedSeq = header.seq;
+      std::cout << "Sequnce no." << header.seq  << " : " << recieverState.fileSize << std::endl;
+      if (data != NULL) {
+        // Lets write to a temp file 
+        assembleFile("temp",-1,data,writeSize,false);
+        recieverState.fileSize -= writeSize;
+      };      
+      recieverState.windowCounter++;
+      // Send out an Acknowledge when counter > win Size/2
+      if (recieverState.windowCounter > recieverState.windowSize / 2 || recieverState.fileSize <= 0) {
+        // Send an ack for half the window size
+        std::unique_ptr<udp_header>k(new udp_header());
+        k->ack = 2;
+        k->seq = recieverState.lastRecievedSeq + 1;
+        sendHeader(std::move(k),(struct sockaddr *) &recv_addr ,recv_len);
+      }
+      if (recieverState.fileSize <= 0) {
+        closeFile("temp");
+      }
     }
   } else if (header.seq < recieverState.lastRecievedSeq + 1) {
     // Discard the packet but,
@@ -96,7 +99,7 @@ void handleReciever (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
     k->seq = recieverState.lastRecievedSeq + 1;
     sendHeader(std::move(k),(struct sockaddr *) &recv_addr ,recv_len);
   } else {            
-    std::cout << "Duplicate ack " << header.seq<< std::endl;
+    std::cout << "Sending Duplicate ack " << header.seq<< std::endl;
     // Send a repeat request for the out of order packet
     std::unique_ptr<udp_header>k(new udp_header());
     k->ack = 1;
@@ -114,7 +117,7 @@ void handleSender (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv
     senderState.lastAckedNum = header.seq-1;
     senderState.expSeqNum = header.seq;
     senderState.resume();   
-  } else {
+  } else if (header.seq > senderState.lastAckedNum){
     int skip = header.seq - senderState.lastAckedNum;
     senderState.lastAckedNum = header.seq - 1;
     std::cout << "Ack accepted " << header.seq << " Skipping " << skip << std::endl;
@@ -126,6 +129,8 @@ void handleSender (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv
     // Then this is an ack , send it to the senderThread if window is full
     //if (senderState.windowCounter > senderState.windowSize) {
     senderState.resume();
+  } else {
+    // Already ack recieved for this -- Just a repeat ack - ignore
   }
 }
 
@@ -143,7 +148,8 @@ void* createReciever (void* args) {
           
   char buffer[PACKET_SIZE];
   std::unique_ptr<char>data(new char[PACKET_SIZE]);
-  struct sockaddr_in recv_addr;   udp_header header;
+  struct sockaddr_in recv_addr;   
+  udp_header header;
   socklen_t recv_len = (socklen_t)sizeof(recv_addr);
   int count = 0;
   // Reciever vars
@@ -186,7 +192,7 @@ void* createReciever (void* args) {
       // one or both of the descriptors have data
       if (FD_ISSET(s, &readfds) && (recvfrom(s,buffer,PACKET_SIZE,0,
                                              (struct sockaddr *) &recv_addr , &recv_len) >= 0)) {
-        readPacket(buffer,&header,data.get());
+        readPacket(buffer,&header,data.get());        
         // Meant for reciever if ack <=0
         if (header.ack <= 0) {
           recieverState.recv_addr = recv_addr;
@@ -199,16 +205,13 @@ void* createReciever (void* args) {
         }
 
         if (header.hasFileInfo) {
-          std::cout << "Recieving file info " << std::endl;          
+          std::cout << "Recieving file info " << header.ack << std::endl;
           if (header.ack <= 0) {
             handleRecFStat(header,data.get(),recv_addr , recv_len);
-          } else if (header.ack == -1) {
-            // Future - Ideally should wait for ack-ack
           } else {     
             handleSenFStat(header,data.get(),recv_addr , recv_len);
           }
-        }
-        else if (header.ack > 0) {
+        } else if (header.ack > 0) {
           handleSender(header,data.get(),recv_addr , recv_len);
         } else if (header.ack <= 0) {
           handleReciever(header,data.get(),recv_addr , recv_len);
@@ -225,71 +228,43 @@ struct CbArgs {
   sockaddr_in clientaddr;
 };
 
-int processBuffer(std::unique_ptr<func_args> args) {
+int sendBuffer(sockaddr_in clientaddr,char* data , int seq) {
   if (senderState.expSeqNum < senderState.lastAckedNum) {
     // Then goback N
     return senderState.expSeqNum;
-  };
-  CbArgs *forw = (CbArgs*)args->forw;
-  File_stats *fs = (File_stats*) args->func;
+  }else if (seq < senderState.lastAckedNum + 1) {
+    // Don't resend old - send new 
+    return senderState.lastAckedNum + 1;
+  };  
   char packet[PACKET_SIZE];
   udp_header k;
   int error;
   long waitTime ;
-  if (fs->isFstat) {
-    k.hasFileInfo = true;
-    std::unique_ptr<fileInfo> info(new fileInfo());
-    info->size = fs->totalSize;
-    //info->filename = fs->fpath;
-    createRequestPacket(packet,&k,info.get());
-    do {
-      sendPacket((sockaddr*) &forw->clientaddr ,sizeof(sockaddr_in),packet);    
-      // Deafult wait is 2 seconds - Use rtt when it arrives
-      waitTime = senderState.rtt > 0 ? senderState.rtt : 2000;
-      error = senderState.waitTime(waitTime);
-    } while (error == ETIMEDOUT); // Retransmit if error 
-    // Ok set window size to 1 and lets start keeping some counter 
-    senderState.windowSize = 1;
-    // Transfer
-    senderState.windowCounter = 0;
-  } else {
-    // No ack present , represented by setting it to 0
-    k.hasFileInfo = false;
-    k.ack = 0;
-    k.seq = fs->seq;
-    if(fs->eof){
-      waitTime = senderState.rtt > 0 ? senderState.rtt : 2000;
-      error = senderState.waitTime(waitTime);
-      if (error && senderState.lastAckedNum < k.seq) {
-        std::cout << "resending last state"<< senderState.lastAckedNum << "  " << k.seq << std::endl;
-        // Resend from the last acked part
-        return senderState.lastAckedNum + 1;
-      } else {
-        std::cout << "FIle Complete " << std::endl;
-        return -1;
-      }
-    }
-
-    writeToBuffer(packet, &k , fs->data);
-    std::cout << "Sequence Num " << k.seq << " Wind "<< senderState.windowCounter << std::endl;
-    int n = sendto(app.socket, packet , PACKET_SIZE, 0, (const sockaddr*) &forw->clientaddr ,sizeof(sockaddr_in));
-    // Wait if 10 packets sent
-    if (senderState.windowCounter > senderState.windowSize) {    
-      timespec time;
-      // TODO --- replace with jacobs rtt
-      error = senderState.waitTime(senderState.rtt);
-      if (error == ETIMEDOUT) {
-        // Resend from the last acked part
-        return senderState.lastAckedNum + 1;
-      };
-      if (senderState.expSeqNum < senderState.lastAckedNum) {
-        // Then goback N and reduce window Size /2 
-        senderState.windowSize /= 2;
-        return senderState.expSeqNum;
-      }
+  // No ack present , represented by setting it to 0
+  k.hasFileInfo = false;
+  k.ack = 0;
+  k.seq = seq;  
+  writeToBuffer(packet, &k , data);
+  
+  std::cout << "Sequence Num " << k.seq << " Wind "<< senderState.windowCounter << std::endl;
+  int n = sendto(app.socket, packet , PACKET_SIZE, 0, (const sockaddr*) &clientaddr ,sizeof(sockaddr_in));
+  // Wait if 10 packets sent
+  if (senderState.windowCounter > senderState.windowSize) {    
+    timespec time;  
+    std::cout << "Sender RTT " << senderState.rtt << std::endl;
+    error = senderState.waitTime(senderState.rtt);
+    if (error == ETIMEDOUT) {
+      // Resend from the last acked part
+      return senderState.lastAckedNum + 1;
     };
-    senderState.windowCounter++;
-  }  
+    if (senderState.expSeqNum < senderState.lastAckedNum) {
+      // Then goback N and reduce window Size /2 
+      std::cout << "Doing multiplicative decrease " << std::endl;
+      senderState.windowSize /= 2;
+      return senderState.expSeqNum;
+    }
+  };
+  senderState.windowCounter++;   
   return -1;
 }
 
@@ -317,34 +292,51 @@ int sendFileInfo(sockaddr_in clientaddr,string name) {
   int error;
   long rtt = senderState.rtt;
   if (senderState.rtt == 0)
-   rtt = 2000;
-  
+   rtt = 2000;  
   do {
-    std::cout << "Sending packet" << std::endl;
     sendPacket((sockaddr*) &clientaddr , clientlen , buffer);
     error = senderState.waitTime(rtt);
   } while(error == ETIMEDOUT);  
+  std::cout << "Got ack from reciever " << std::endl;
+  // Ok set window size to 1 and lets start keeping some counter 
+  senderState.windowSize = 1;
+  // Transfer
+  senderState.windowCounter = 0;
 }
 
-int sendToClient(sockaddr_in clientaddr,const char *respath , long start , long offset ,int (*cb) (std::unique_ptr<func_args>)) {
+int sendToClient(sockaddr_in clientaddr,const char *respath , long start , long offset) {
+  std::cout << "Sending data " << std::endl;
   int sfd = app.socket;  
   socklen_t clientlen = sizeof(clientaddr);  
   CbArgs *cbArguments = new CbArgs();  
   cbArguments->clientaddr = clientaddr;
   //getPacketFile (string name,char *data, int start, long offset, bool isLast) 
-  char buffer[1500];
+  char buffer[DATA_SIZE];
   int seq = 0;
-  long fsize = getFileSize(string(respath));
-  while(getPacketFile(string(respath), buffer , -1 , PACKET_SIZE - sizeof(udp_header) , false) != -1) {
+  //long fsize = getFileSize(string(respath));  
+  int expSeq;
+  int maxSeq = -1;
+  while(1) {
+    if (getPacketFile(string(respath), buffer , seq * DATA_SIZE , DATA_SIZE , false) == -1) {
+      maxSeq = seq;
+      std::cout << "Max sequence is " <<seq << std::endl;
+    }
     // Do something with the buffer_size
-    seq++;
+    expSeq = sendBuffer(clientaddr,buffer, seq);
+    if (seq == maxSeq) {
+      std::cout << "LAst seq " << std::endl;
+      sleep(10);
+    }
+    if (expSeq == -1 && (seq < maxSeq || maxSeq == -1 )) 
+      seq++;
+    else
+      seq = expSeq;
+    std::cout << "Last acked Num " << senderState.lastAckedNum << std::endl;
+    if (senderState.lastAckedNum >= maxSeq && maxSeq != -1) 
+      break;
   }
-  // int m = getFile(respath , PACKET_SIZE - sizeof(udp_header) ,start, offset , cb , cbArguments);
-  // if (m < 0) {
-  //   std::cout << "Failed" << std::endl;
-  // }
+  std::cout << "Finished " << std::endl;
 }
-
 
 // Threaded apps
 void* getDataInThread(void* args) {
@@ -355,6 +347,6 @@ void* getDataInThread(void* args) {
   //string fname = somargs->filename; 
   string fname = "../www/file";
   sendFileInfo(cl_addr , fname);    
-  sendToClient(cl_addr , "../www/file" , 0 , -1 , processBuffer); 
+  sendToClient(cl_addr , "../www/file" , 0 , -1); 
   return NULL;
 }
