@@ -2,7 +2,28 @@
 #include <iostream>
 #include <inttypes.h>
 using namespace std;
-
+void testRttCaclulation(){
+  senderState.setTime();
+  sleep(2);
+  senderState.setRTT();
+  std::cout << "RTT is " << senderState.rtt << std::endl;
+  senderState.setTime();
+  sleep(2);
+  senderState.setRTT();
+  std::cout << "RTT is " << senderState.rtt << std::endl;
+  senderState.setTime();
+  sleep(2);
+  senderState.setRTT();
+  std::cout << "RTT is " << senderState.rtt << std::endl;
+  senderState.setTime();
+  sleep(2);
+  senderState.setRTT();
+  std::cout << "RTT is " << senderState.rtt << std::endl;
+  senderState.setTime();
+  sleep(2);
+  senderState.setRTT();
+  std::cout << "RTT is " << senderState.rtt << std::endl;
+}
 void testSerialization(){
   udp_header k;
   k.ttl = 100;
@@ -91,18 +112,37 @@ bool isTrueAtPos(char a , int pos) {
 char setBoolAtPos(char a ,int pos, bool b) {
   return a;
 }
+void testMap() {
+  unordered_map<string, int> kk;
+  kk.insert({{"dasdasd",1}});
+  kk.insert({{"a",2}});
+  auto search = kk.find("a");
+  if (search != kk.end()) {
+    std::cout << search->second << std::endl;
+  }
+}
 int main(int argus , char **argv){
+  // for(int i = 0 ; i < 1000; i++) {
+  //   assembleFile("asd", i , "as",false);
+  // }
+
+  assembleFile("aq2", 0 ,(char*)"dassd \ne1asddddddddddddd2312 asdasd",true);
+
+  //testRttCaclulation();
   // std::unique_ptr<File_stats> ret(new File_stats());
   // ret->seq = 100;
   //testSerialization();
-  int error ;
-  do {
-    char a = (int) 0;
-    std::cout << (int) a  << std::endl;
-    error = senderState.waitTime(1000);
-    std::cout << error << ETIMEDOUT<< std::endl;
-  }  while (error == ETIMEDOUT) ;
-  std::cout << "hello" << std::endl;
+  // int error ;
+  // do {
+  //   char a = (int) 0;
+  //   std::cout << (int) a  << std::endl;
+  //   error = senderState.waitTime(1000);
+  //   std::cout << error << ETIMEDOUT<< std::endl;
+  // }  while (error == ETIMEDOUT) ;
+  // std::cout << "hello" << std::endl;
+  
+  // if (t.tv_sec == 0) 
+  //   std::cout << "nulll" << std::endl;
   //getFile("test.cpp",200, 0 ,-1 ,print, NULL);
   // Test stackoverflow 
   // for(int i=0;i < 10000 ;i++) {

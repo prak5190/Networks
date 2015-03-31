@@ -63,7 +63,9 @@ struct appglobals {
 };
 struct SenderState {
   long windowSize, seqNum , expSeqNum = 999999999 , lastAckedNum, windowCounter;
-  timeval *rtt; 
+  timespec  *lastMsgTime; 
+  // Rtt in milliseconds
+  long rtt = 0;
   bool isSending;
   // Address of last reciever 
   sockaddr_in  recv_addr;
@@ -79,11 +81,50 @@ struct SenderState {
   int waitTime(int ms) {
     return thread_timed_wait(this->mut,this->cond,ms);
   }
+  void setTime() {
+    timespec* lastMsgTime = this->lastMsgTime;
+    if (lastMsgTime == NULL) 
+      lastMsgTime = new timespec();
+    timespec_now(lastMsgTime);
+    this->lastMsgTime = lastMsgTime;
+  }
+  void setRTT() {
+    // Get prev time 
+    timespec *prev = this->lastMsgTime;
+    // Get current time 
+    this->lastMsgTime = new timespec();    
+    this->setTime();    
+    long sampleRtt;
+    if(prev != NULL) {
+      timespec_subtract(this->lastMsgTime,prev);
+      sampleRtt = timespec_milliseconds(this->lastMsgTime);
+      delete prev;
+    } else {
+      this->setTime();
+      return;
+    }
+    long estRtt = this->rtt;
+    long deviation = sampleRtt - estRtt;
+    if (estRtt == 0) {
+      // Just set it to sample
+      this->rtt = sampleRtt;
+    } else {
+      // Calcualate RTT 
+      this->rtt =  calculateRTT(sampleRtt , estRtt , deviation);
+    }
+    this->setTime();
+  }
+  ~SenderState () {
+    delete this->lastMsgTime;
+  }
 } senderState;
 struct RecieverState {
   bool isRecieving;
   long windowSize, lastRecievedSeq , seqBase , seqMax,windowCounter;
-  timeval *rtt;
+  timespec  *lastMsgTime; 
+  // Rtt in milliseconds
+  long rtt = 0;
+
   // Address of last reciever 
   sockaddr_in  recv_addr;
   socklen_t recv_len;
@@ -97,6 +138,43 @@ struct RecieverState {
   }
   int waitTime(int ms) {
     return thread_timed_wait(this->mut,this->cond,ms);
+  }
+  void setTime() {
+    timespec* lastMsgTime = this->lastMsgTime;
+    if (lastMsgTime == NULL) 
+      lastMsgTime = new timespec();
+    timespec_now(lastMsgTime);
+    this->lastMsgTime = lastMsgTime;
+  }
+  void setRTT() {
+    // Get prev time 
+    timespec *prev = this->lastMsgTime;
+    // Get current time 
+    this->lastMsgTime = new timespec();    
+    this->setTime();    
+    long sampleRtt;
+    if(prev != NULL) {
+      timespec_subtract(this->lastMsgTime,prev);
+      sampleRtt = timespec_milliseconds(this->lastMsgTime);
+      delete prev;
+    } else {
+      this->setTime();
+      return;
+    }
+    long estRtt = this->rtt;
+    long deviation = sampleRtt - estRtt;
+    if (estRtt == 0) {
+      // Just set it to sample
+      this->rtt = sampleRtt;
+    } else {
+      // Calcualate RTT 
+      this->rtt =  calculateRTT(sampleRtt , estRtt , deviation);
+    }
+    this->setTime();
+  }
+
+  ~RecieverState () {
+    delete this->lastMsgTime;
   }
 } recieverState;
 // Used in case of thread or in case of callback
@@ -164,18 +242,6 @@ void writeToBuffer(char* buffer, udp_header *header, const char* data) {
   memcpy(&buffer[sz] , data , PACKET_SIZE - sz);
 };
 
-// All calculations in millis
-long calculateRTT(long sampleRtt , long estRtt , long deviation) {
-  // 3 is bacase of sigma = 1/8 - i.e unshift by 3
-  sampleRtt -= (estRtt >> 3) ;
-  estRtt += sampleRtt; 
-  if (sampleRtt < 0)
-    sampleRtt = -sampleRtt;
-  sampleRtt -= (deviation >> 3);
-  deviation += sampleRtt;
-  // Timout
-  return (estRtt >> 3) + (deviation >> 1);
-}
 #endif
 
 

@@ -18,6 +18,39 @@ struct File_stats {
   }
 };
 
+
+std::unordered_map<string,FILE*> FileDescriptorMap;
+// Will pad data to the chunksize 
+int assembleFile (string name,int start, char* data , bool isLast) {
+  using namespace std;
+  auto search = FileDescriptorMap.find(name);
+  FILE* fd = NULL;
+  bool isMapped = false;
+  if (search != FileDescriptorMap.end()) {
+    fd = search->second;
+    isMapped = true;
+  } else {
+    // Open the file -- Create if not present
+    fd = std::fopen(name.c_str(), "w+");
+    FileDescriptorMap.insert(std::make_pair(name , fd));
+  }
+  if (start != -1 || ftell(fd) != start) {
+    fseek(fd , start,SEEK_SET);
+  };
+
+  if (fwrite(data,sizeof(char),sizeof(data), fd) != 0){
+    // File writing done
+    //std::cout << "File writing done " << std::endl;
+  }
+  if (isLast) {
+    fclose(fd);
+    // Delete from map
+    FileDescriptorMap.erase(name);
+  } else if(!isMapped){
+    FileDescriptorMap.insert(std::make_pair(name , fd));
+  }
+  return 0;
+};
 int getFile(const char* fpath,int buffer_size, long start , long offset ,int (*cb) (std::unique_ptr<func_args>), void* forw) {
   using namespace std;
   FILE* fd = NULL ;
@@ -89,7 +122,8 @@ int getFile(const char* fpath,int buffer_size, long start , long offset ,int (*c
         toCb->func = ret;
         // Pass eof 
         goback = cb(move(toCb));
-        if (goback >= 0) {
+        std::cout << "Going back " << goback << std::endl;
+        if (goback >= 0 && goback < seq) {
           // Then go to that position           
           fseek(fd ,goback * buffer_size ,SEEK_SET);
           seq = goback;

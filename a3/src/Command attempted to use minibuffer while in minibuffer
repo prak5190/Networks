@@ -1,1 +1,0 @@
-Compile command: g++ test.cpp -lpthread -std=c++0x -o t && ./t

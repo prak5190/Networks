@@ -24,6 +24,15 @@ int sendFileRequest (string fname , sockaddr* addr, socklen_t size) {
   return sendto(app.socket,packet , PACKET_SIZE, 0, addr ,size);
 }
 
+void handleRecFStat (udp_header header , char data[1500] , sockaddr_in recv_addr , socklen_t recv_len) {
+}
+void handleSenFStat (udp_header header , char data[1500] , sockaddr_in recv_addr , socklen_t recv_len) {
+}
+void handleReciever (udp_header header , char data[1500] , sockaddr_in recv_addr , socklen_t recv_len) {
+}
+void handleSender (udp_header header , char data[1500] , sockaddr_in recv_addr , socklen_t recv_len) {
+}
+
 // A recieved which parses this data 
 void* createReciever (void* args) {
   int port = app.recieve_port;
@@ -57,6 +66,7 @@ void* createReciever (void* args) {
   tv.tv_sec = 5;
   int rv;
   listen(s, 10);
+  long tSize = 0;
   while(1) {
     rv = select(selectN, &readfds, NULL, NULL, &tv);
     tv.tv_sec = 5;
@@ -66,16 +76,15 @@ void* createReciever (void* args) {
       // Represents timeout
       if (0 && senderState.isSending) {
         std::cout << "Sender hasn't got an ack" << std::endl;
-      } else if (recieverState.isRecieving){
+      }
+      if (recieverState.isRecieving){
         std::cout << "Recieve timing out " << std::endl;
         // Send a duplicate ack
         std::unique_ptr<udp_header>k(new udp_header());
         k->ack = 1;
         k->seq = recieverState.lastRecievedSeq + 1;
         sendHeader(std::move(k),(struct sockaddr *) &recieverState.recv_addr ,recieverState.recv_len);
-      } else {
-        // Ignore - No need to worry
-        //printf("Timeout occurred -#ignore \n");
+        senderState.setTime();
       }
     } else {
       // one or both of the descriptors have data
@@ -86,13 +95,16 @@ void* createReciever (void* args) {
         if (header.ack <= 0) {
           recieverState.recv_addr = recv_addr;
           recieverState.recv_len = recv_len;
+          recieverState.setRTT();
         } else {
           senderState.recv_addr = recv_addr;
           senderState.recv_len = recv_len;
+          senderState.setRTT();
         }
 
         if (header.hasFileInfo) {
           std::cout << "Recieving file info " << std::endl;
+          
           if (header.ack == 0) {
             std::unique_ptr<udp_header>k(new udp_header());
             // Any non-0 number indicates ack for fileInfo
@@ -131,11 +143,9 @@ void* createReciever (void* args) {
           }
         }
         else if (header.ack > 0) {
-          std::cout << "Got ack "<<header.seq << std::endl;
-          long temp = senderState.lastAckedNum;
-          int skip = senderState.lastAckedNum - temp;      
+          std::cout << "Got ack "<<header.seq << " : "<<senderState.lastAckedNum << std::endl;
           if (header.ack == 1 && senderState.lastAckedNum > header.seq-1) {
-            std::cout << "Repeat Ack" << header.seq << std::endl;
+            std::cout << "Duplicate Ack" << header.seq << std::endl;
             // Then this is a repeat ack 
             // reset the expected seqnum
             senderState.lastAckedNum = header.seq-1;
@@ -143,29 +153,30 @@ void* createReciever (void* args) {
             senderState.resume();
             continue;
           } else {
-            senderState.lastAckedNum = header.seq-1;
-            std::cout << "Ack accepted " << header.seq << std::endl;
+            int skip = header.seq - senderState.lastAckedNum;
+            senderState.lastAckedNum = header.seq - 1;
+            std::cout << "Ack accepted " << header.seq << " Skipping " << skip << std::endl;
             // Either reduce by skip or make it 0 - window can't be negative       
             senderState.windowCounter -= senderState.windowCounter - skip > 0 ? skip : senderState.windowCounter;
             // Got an ack - Lets increase window size - Additive increase
-            senderState.windowSize += 1;
+            if (senderState.windowSize < app.max_window_size)
+              senderState.windowSize += 1;
             // Then this is an ack , send it to the senderThread if window is full
             //if (senderState.windowCounter > senderState.windowSize) {
             senderState.resume();
           }
-
-          //}
         } else if (1 || header.ack <= 0) {
           // Anything with ack = 0 mean new data for reciever       
           recieverState.windowSize = header.window_size;
-          recieverState.windowCounter--;              
+          recieverState.windowCounter--;            
           if (header.seq == recieverState.lastRecievedSeq + 1) {
             // Recieved pakcet properly - lets just increase window size 
             recieverState.lastRecievedSeq = header.seq;
             std::cout << "Sequnce no." << header.seq << std::endl;
             if (data.get() != NULL) {
               // Lets write to a temp file 
-              std::cout << data.get() << std::endl;
+              assembleFile("temp",-1,data.get(),false);
+              //std::cout << data.get() << std::endl;
             };
             recieverState.windowCounter++;
             // Send out an Acknowledge when counter > win Size/2
@@ -176,7 +187,7 @@ void* createReciever (void* args) {
               k->seq = recieverState.lastRecievedSeq + 1;
               sendHeader(std::move(k),(struct sockaddr *) &recv_addr ,recv_len);
             }
-          } else if (header.seq < recieverState.lastRecievedSeq + 1){
+          } else if (header.seq < recieverState.lastRecievedSeq + 1) {
             // Discard the packet but,
             // Send an ack - Maybe the sender didn't recieve it
             // but indicate that this is not a duplicate ack
@@ -185,8 +196,8 @@ void* createReciever (void* args) {
             k->ack = 2;
             k->seq = recieverState.lastRecievedSeq + 1;
             sendHeader(std::move(k),(struct sockaddr *) &recv_addr ,recv_len);
-          } else {
-            std::cout << "Duplicate ack " << std::endl;
+          } else {            
+            std::cout << "Duplicate ack " << header.seq<< std::endl;
             // Send a repeat request for the out of order packet
             std::unique_ptr<udp_header>k(new udp_header());
             k->ack = 1;
@@ -217,6 +228,7 @@ int processBuffer(std::unique_ptr<func_args> args) {
   char packet[1500];
   udp_header k;
   int error;
+  long waitTime ;
   if (fs->isFstat) {
     k.hasFileInfo = true;
     std::unique_ptr<fileInfo> info(new fileInfo());
@@ -226,7 +238,8 @@ int processBuffer(std::unique_ptr<func_args> args) {
     do {
       sendPacket((sockaddr*) &forw->clientaddr ,sizeof(sockaddr_in),packet);    
       // Deafult wait is 2 seconds - Use rtt when it arrives
-      error = senderState.waitTime(2000);
+      waitTime = senderState.rtt > 0 ? senderState.rtt : 2000;
+      error = senderState.waitTime(waitTime);
     } while (error == ETIMEDOUT); // Retransmit if error 
     // Ok set window size to 1 and lets start keeping some counter 
     senderState.windowSize = 1;
@@ -238,10 +251,17 @@ int processBuffer(std::unique_ptr<func_args> args) {
     k.ack = 0;
     k.seq = fs->seq;
     if(fs->eof){
-      std::cout << "FIle Complete " << std::endl;
-      return -1;
+      waitTime = senderState.rtt > 0 ? senderState.rtt : 2000;
+      error = senderState.waitTime(waitTime);
+      if (error && senderState.lastAckedNum < k.seq) {
+        std::cout << "resending last state"<< senderState.lastAckedNum << "  " << k.seq << std::endl;
+        // Resend from the last acked part
+        return senderState.lastAckedNum + 1;
+      } else {
+        std::cout << "FIle Complete " << std::endl;
+        return -1;
+      }
     }
-
 
     writeToBuffer(packet, &k , fs->data);
     std::cout << "Sequence Num " << k.seq << " Wind "<< senderState.windowCounter << std::endl;
@@ -250,7 +270,7 @@ int processBuffer(std::unique_ptr<func_args> args) {
     if (senderState.windowCounter > senderState.windowSize) {    
       timespec time;
       // TODO --- replace with jacobs rtt
-      error = senderState.waitTime(2000);
+      error = senderState.waitTime(senderState.rtt);
       if (error == ETIMEDOUT) {
         // Resend from the last acked part
         return senderState.lastAckedNum + 1;
@@ -261,7 +281,7 @@ int processBuffer(std::unique_ptr<func_args> args) {
         return senderState.expSeqNum;
       }
     };
-    senderState.windowCounter++;  
+    senderState.windowCounter++;
   }
   
   return -1;

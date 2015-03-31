@@ -6,7 +6,7 @@ int initSocket();
 void initApp(appglobals *app , int port) {
   int s = initSocket();
   app->socket = s;
-  app->max_window_size = 10;
+  app->max_window_size = 100;
   app->recieve_port = port;
 };
 
@@ -57,28 +57,21 @@ int main (int argc , char** argv) {
   return 0;
 }
 
-
-
-
-
-
 int initSocket() {
   // Create socket 
   int s;			   /* s = socket */
   s = socket(AF_INET, SOCK_DGRAM, 0);
   //  Enable reuse
-  {  
-    int true1 = 1;
-    if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *) &true1,
-                   sizeof(true1)) == -1)
-      { perror("reuseaddr");
-        return -1;
-      }
-    if (setsockopt(s,IPPROTO_IP,IP_RECVTTL , (char *) &true1,
-                   sizeof(true1)) == -1)
-      { perror("RecvTTL error");
-        return -1;
-      }
+  int true1 = 1;
+  if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *) &true1,
+                 sizeof(true1)) == -1) {
+    perror("reuseaddr");
+    return -1;
   }
+  // if (setsockopt(s,IPPROTO_IP,IP_RECVTTL , (char *) &true1,
+  //                sizeof(true1)) == -1)
+  //   { perror("RecvTTL error");
+  //     return -1;
+  //   }
   return s;
 };
