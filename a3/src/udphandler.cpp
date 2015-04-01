@@ -27,7 +27,7 @@ int sendFileRequest (const char* fname , sockaddr* addr, socklen_t size) {
 void handleRecFStat (udp_header header , char* data , sockaddr_in recv_addr , socklen_t recv_len) {
   fileInfo fs; // = new fileInfo();  
   memcpy(&fs, data , sizeof(fileInfo));   
-  
+  recieverState.setRTT();
   recieverState.filename = string(fs.filename);
   recieverState.initialFileSize = recieverState.fileSize = fs.size;
   recieverState.windowCounter = 0;
@@ -150,7 +150,12 @@ void handleSender (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv
     // reset the expected seqnum
     senderState.lastAckedNum = header.seq-1;
     senderState.expSeqNum = header.seq;
-    senderState.resume();   
+    if (log(3.4))
+      std::cout << "Doing multiplicative decrease " << std::endl;
+    // Duplicate ack indicates packet loss - Reduce 
+    senderState.windowSize /= 2;
+    printSenderStatistics();
+    senderState.resume();
   } else if (header.seq > senderState.lastAckedNum + 1){
     int skip = header.seq - senderState.lastAckedNum;
     senderState.lastAckedNum = header.seq - 1;
@@ -163,6 +168,7 @@ void handleSender (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv
     // Got an ack - Lets increase window size - Additive increase
     if (senderState.windowSize < app.max_window_size)
       senderState.windowSize += 1;
+    printSenderStatistics();
     // Then this is an ack , send it to the senderThread if window is full
     //if (senderState.windowCounter > senderState.windowSize) {
     senderState.resume();
@@ -208,7 +214,7 @@ void* createReciever (void* args) {
   while(1) {
     rv = select(selectN, &readfds, NULL, NULL, &tv);
     tv.tv_sec = 5;
-
+    
     // Give random delays using sleep -- Happens on both server and client side
     if (app.hasLatency) {
       srandom(clock());
@@ -293,7 +299,6 @@ int sendBuffer(sockaddr_in clientaddr,char* data , int seq) {
   };  
   char packet[PACKET_SIZE];
   udp_header k;
-  int error;
   long waitTime ;
   // No ack present , represented by setting it to 0
   //k.hasFileInfo = false;
@@ -303,23 +308,6 @@ int sendBuffer(sockaddr_in clientaddr,char* data , int seq) {
   if(log(4))
     std::cout << "Sequence Num " << k.seq << " Wind "<< senderState.windowCounter << std::endl;
   int n = sendto(app.socket, packet , PACKET_SIZE, 0, (const sockaddr*) &clientaddr ,sizeof(sockaddr_in));
-  // Wait if 10 packets sent
-  if (senderState.windowCounter > senderState.windowSize) {    
-    timespec time;  
-    if(log(4.5))
-      std::cout << "Sender RTT " << senderState.rtt << std::endl;
-    error = senderState.waitTime(senderState.rtt);
-    if (error == ETIMEDOUT) {
-      // Resend from the last acked part
-      return senderState.lastAckedNum + 1;
-    };
-    if (senderState.expSeqNum < senderState.lastAckedNum) {
-      // Then goback N and reduce window Size /2 
-      std::cout << "Doing multiplicative decrease " << std::endl;
-      senderState.windowSize /= 2;
-      return senderState.expSeqNum;
-    }
-  };
   senderState.windowCounter++;   
   return -1;
 }
@@ -373,6 +361,7 @@ int sendToClient(sockaddr_in clientaddr,const char *respath , long start , long 
   //long fsize = getFileSize(string(respath));  
   int expSeq;
   int maxSeq = -1;
+  int error;
   while(1) {
     if (getPacketFile(string(respath), buffer , seq * DATA_SIZE , DATA_SIZE , false) == -1) {
       maxSeq = seq;
@@ -381,6 +370,21 @@ int sendToClient(sockaddr_in clientaddr,const char *respath , long start , long 
     }
     // Do something with the buffer_size
     expSeq = sendBuffer(clientaddr,buffer, seq);
+    if (senderState.windowCounter > senderState.windowSize) {    
+      timespec time;  
+      if(log(4.5))
+        std::cout << "Sender RTT " << senderState.rtt << std::endl;
+      error = senderState.waitTime(senderState.rtt);
+      if (error == ETIMEDOUT) {
+        // Resend from the last acked part
+        expSeq = senderState.lastAckedNum + 1;
+      };
+      if (senderState.expSeqNum < senderState.lastAckedNum) {
+        expSeq =  senderState.expSeqNum;
+      }
+      continue;
+    };
+
     if(log(3))
     if (seq == maxSeq) {
       std::cout << "LAst seq " << std::endl;
@@ -409,10 +413,10 @@ void* getDataInThread(void* args) {
   fname.append(somargs->filename); 
   if(log(6))
     std::cout << "Sending File : "<< fname << std::endl;
-  if(log(7))
   if(sendFileInfo(cl_addr , fname) == -1) {
-    std::cout << "File not found " << std::endl;    
-  } else{
+    if(log(7))
+      std::cout << "File not found " << std::endl;    
+  } else {
     sendToClient(cl_addr , fname.c_str() , 0 , -1); 
   }   
   return NULL;

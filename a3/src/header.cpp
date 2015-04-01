@@ -258,18 +258,32 @@ void writeToBuffer(char* buffer, udp_header *header, const char* data) {
   memcpy(&buffer[sz] , data , PACKET_SIZE - sz);
 };
 
-// Print Utils 
+// Print Utils - 
 float lastProgress;
 void printRecProgress() {
   float progress = ((recieverState.initialFileSize - recieverState.fileSize)) * 100/ (recieverState.initialFileSize); 
   //std::cout << "Progress " << progress << std::endl;
   if (progress > lastProgress + 0.5) {
-    if (((int)progress) % 10 == 0)
+    if (((int)progress) % 10 == 0) {
       std::printf("Progress %.0f \n", progress);
+      std::cout << "RTT " << recieverState.rtt  << std::endl;
+    }
     lastProgress = progress;
   }
   //   std::printf("Progress %.2f \r", progress);
   // }
+}
+
+long oldWindowSize;
+void printSenderStatistics() {
+  if (senderState.windowSize != oldWindowSize) {    
+    if (senderState.windowSize - oldWindowSize == 1)
+      std::cout << "In slow Start : ";
+    else if (oldWindowSize!= 0 &&   senderState.windowSize/oldWindowSize == 2) 
+      std::cout << "In Multiplicative decrease : ";
+    std::cout << "Max Window Size " << senderState.windowSize << " : Window Counter  " << senderState.windowCounter << std::endl;
+    oldWindowSize = senderState.windowSize;
+  }
 }
 
 #endif
