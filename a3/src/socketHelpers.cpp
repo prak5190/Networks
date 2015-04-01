@@ -2,6 +2,25 @@
 #ifndef __SOCKETHELPER__
 #define __SOCKETHELPER__ 1 
 // Socket helpers !!!!!!!!!!!!
+int initSocket() {
+  // Create socket 
+  int s;			   /* s = socket */
+  s = socket(AF_INET, SOCK_DGRAM, 0);
+  //  Enable reuse
+  int true1 = 1;
+  if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *) &true1,
+                 sizeof(true1)) == -1) {
+    perror("reuseaddr");
+    return -1;
+  }
+  // if (setsockopt(s,IPPROTO_IP,IP_RECVTTL , (char *) &true1,
+  //                sizeof(true1)) == -1)
+  //   { perror("RecvTTL error");
+  //     return -1;
+  //   }
+  return s;
+};
+
 int bindUdpSocket(int port , int s) {
   sockaddr_in in_addr;	   /* Structure used for bind() */
   in_addr.sin_family = AF_INET;                   /* Protocol domain */

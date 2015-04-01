@@ -2,7 +2,7 @@
 #include "udphandler.cpp"
 using std::cout;
 using std::endl;
-int initSocket();
+
 void initApp(appglobals *app , int port) {
   int s = initSocket();
   app->socket = s;
@@ -11,7 +11,6 @@ void initApp(appglobals *app , int port) {
   app->isDupElseSel = true;
   app->max_window_size = 100;
   app->recieve_port = port;
-  
   app->hasLatency = false;
   app->hasDrops = false;
   app->latencyTime = 20;
@@ -21,14 +20,42 @@ void initApp(appglobals *app , int port) {
 int main (int argc , char** argv) {
   int port ;
   int destport;
+  bool isSender , isReceiver;
   // Init socket
   pthread_t sthread, rthread;
   int senderThread , recThread;
-  thread_args *args = new thread_args();
-
-  if (argc == 2) {
+  thread_args *args = new thread_args();  
+  int c,i;
+  while ((c = getopt (argc, argv, "srW:D:L:")) != -1) {
+    switch(c) {
+    case 's' : isSender = true;
+      break;
+    case 'r' : 
+      std::cout << "IS recieve_port" << std::endl;
+      isReceiver = true;
+      break;
+    case 'W' :
+      app.max_window_size = atoi(optarg);
+      break;
+    case 'D' : 
+      app.hasLatency = true;
+      app.latencyTime = atoi(optarg);
+      break;
+    case 'L' : 
+      app.hasLatency = true;
+      app.latencyTime = atoi(optarg);
+      break;
+    case '?':
+      cout<<"Enter required info if any of the flags selected -> L , D , W "<<endl;
+      break;
+    default:
+      std::cout << "Enter info " << optopt << std::endl;
+    };      
+  }
+  
+  if (isReceiver) {
     // Means reciever
-    port = atoi(argv[1]);    
+    port = atoi(argv[argc-1]);    
     initApp(&app,port);
 
     if ((recThread = pthread_create(&rthread , NULL ,createReciever, args)) == 0) {
@@ -37,7 +64,7 @@ int main (int argc , char** argv) {
     // Join all required threads 
     if (recThread == 0)
       pthread_join(rthread,NULL);
-  } else if (argc == 3) {    
+  } else if (isSender) {    
     // Use port as 0 - means bind to any port 
     port = 0;
     initApp(&app,port);
@@ -45,12 +72,12 @@ int main (int argc , char** argv) {
       std::cout << "Listner initialised "  << std::endl;
     };
        
-    string fname = string(argv[1]);
-    destport = atoi(argv[2]);
+    string fname = string(argv[argc-3]);
+    destport = atoi(argv[argc-1]);
     cout<<"Destination port " << destport << endl;
     //Create a thread for the reciever
     args->port = destport;
-    args->ip ="localhost";
+    args->ip = string(argv[argc-2]);
     args->filename = fname;
     if ((senderThread = pthread_create(&sthread , NULL , getDataInThread, args)) == 0) {
       cout<<"Sender Thread created"<<endl;      
@@ -61,25 +88,9 @@ int main (int argc , char** argv) {
       pthread_join(rthread,NULL);
     if (senderThread == 0)
       pthread_join(sthread,NULL);
+  } else {
+      cout<<"Enter -s for sender , -r for receiver, -W to set maxwindow , -D to set drop probability and -L to set latency " <<endl;
   }
   return 0;
 }
 
-int initSocket() {
-  // Create socket 
-  int s;			   /* s = socket */
-  s = socket(AF_INET, SOCK_DGRAM, 0);
-  //  Enable reuse
-  int true1 = 1;
-  if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *) &true1,
-                 sizeof(true1)) == -1) {
-    perror("reuseaddr");
-    return -1;
-  }
-  // if (setsockopt(s,IPPROTO_IP,IP_RECVTTL , (char *) &true1,
-  //                sizeof(true1)) == -1)
-  //   { perror("RecvTTL error");
-  //     return -1;
-  //   }
-  return s;
-};

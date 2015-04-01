@@ -151,22 +151,29 @@ void testFileInfo() {
   long size = getFileSize(name);
   char buffer[PACKET_SIZE], data[PACKET_SIZE];
   udp_header header , n;
-  header.hasFileInfo = true;
   fileInfo finfo;
   fileInfo *nf = new fileInfo();
   finfo.size = getFileSize(name);
   //finfo.filename = "Something";
   createRequestPacket(buffer, &header, &finfo);
   readPacket(buffer , &n ,data);
-  std::cout << "Has info" << n.hasFileInfo << std::endl;
   //memcpy(nf, data , sizeof(fileInfo));
   getFileInfoFromData(data,nf);
   std::cout << "Finfo " << nf->size << std::endl;
 }
 int main(int argus , char **argv){
   //testFileInfo();
-  srandom(clock());
-  std::cout << random() %100 << std::endl;
+  map<int,bool> windwMap;
+  windwMap.insert(pair<int,bool>(1,false));
+  windwMap.insert(pair<int,bool>(6,false));
+  windwMap.insert(pair<int,bool>(2,false));
+  std::cout << windwMap.size() << std::endl;
+  for (auto it = windwMap.begin(); it != windwMap.end(); ++it) {
+    std::cout << it->first << " : " << it->second << std::endl;
+  }
+  std::cout << windwMap.size() << std::endl;
+  windwMap.erase(2);
+  std::cout << windwMap.size() << std::endl;
   return 0;
 }
 

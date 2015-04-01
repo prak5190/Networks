@@ -21,6 +21,7 @@
 #include <sys/time.h>
 #include <bitset>
 #include <unordered_map>
+#include <map>
 // For sockaddr_in
 #include <netinet/in.h>
 // For port - htons
@@ -107,6 +108,8 @@ bool log(float level) {
 
 #include "timeutil.cpp"
 #include "header.cpp"
+#include "state.cpp"
+#include "socketHelpers.cpp"
 #include "fileHandler.cpp"
 #endif
 

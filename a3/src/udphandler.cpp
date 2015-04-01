@@ -56,6 +56,9 @@ void handleSenFStat (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
   senderState.resume();
 }
 
+void handleRecieverSelective (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv_addr , socklen_t recv_len) { 
+  
+}
 void handleReciever (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv_addr , socklen_t recv_len) { 
   if (log(3))
     std::cout << "Header seq " << header.seq << " Next " << recieverState.lastRecievedSeq + 1<<std::endl; 
@@ -140,6 +143,8 @@ void handleReciever (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
   }
 }
 
+void handleSenderSelective (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv_addr , socklen_t recv_len) {
+}
 void handleSender (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv_addr , socklen_t recv_len) {
   if (log(3))
     std::cout << "Got ack "<<header.seq << " : "<<senderState.lastAckedNum << std::endl;
@@ -265,19 +270,6 @@ void* createReciever (void* args) {
           handleSender(header,data.get(),recv_addr , recv_len);
           break;
         };
-        // if (header.hasFileInfo) {
-        //   if(log(3))
-        //     std::cout << "Recieving file info "<< std::endl;
-        //   if (header.ack <= 0) {
-
-        //   } else {     
-
-        //   }
-        // } else if (header.ack > 0) {
-          
-        // } else if (header.ack <= 0) {
-          
-        // }
         // Blank the buffer
         bzero(buffer, sizeof(buffer));       
       }
@@ -409,7 +401,7 @@ void* getDataInThread(void* args) {
   string ip = somargs->ip;
   sockaddr_in cl_addr = getSocketAddr(ip,port);
   //string fname = "../www/a.mp3";
-  string fname = "../www/";
+  string fname = "./www/";
   fname.append(somargs->filename); 
   if(log(6))
     std::cout << "Sending File : "<< fname << std::endl;
