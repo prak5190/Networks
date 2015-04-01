@@ -36,7 +36,7 @@ void handleRecFStat (udp_header header , char* data , sockaddr_in recv_addr , so
   // Send an ack
   std::unique_ptr<udp_header>k(new udp_header());
   // Any non-0 number indicates ack for fileInfo
-  k->ack = 1;
+  k->ack = AckCodes::ShasFileInfo;
   k->hasFileInfo = true;
   sleep(2);
   sendHeader(std::move(k),(struct sockaddr *) &recv_addr ,recv_len);
@@ -98,7 +98,7 @@ void handleReciever (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
       if (recieverState.windowCounter > recieverState.windowSize / 2 || recieverState.fileSize <= 0) {
         // Send an ack for half the window size
         std::unique_ptr<udp_header>k(new udp_header());
-        k->ack = 2;
+        k->ack = AckCodes::SsuccessAck;
         k->seq = recieverState.lastRecievedSeq + 1;
         sendHeader(std::move(k),(struct sockaddr *) &recv_addr ,recv_len);
       }
@@ -112,7 +112,7 @@ void handleReciever (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
       }
     } else {
       std::unique_ptr<udp_header>k(new udp_header());
-      k->ack = 2;
+      k->ack = AckCodes::SsuccessAck;
       k->seq = header.seq + 1;
       sendHeader(std::move(k),(struct sockaddr *) &recv_addr ,recv_len);
       if (!recieverState.fileClosed) {
@@ -129,7 +129,7 @@ void handleReciever (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
     if(log(4))
       std::cout << "Resending ack for seq "<<header.seq << std::endl;
     std::unique_ptr<udp_header>k(new udp_header());
-    k->ack = 2;
+    k->ack = AckCodes::SrepeatAck;
     k->seq = recieverState.lastRecievedSeq + 1;
     sendHeader(std::move(k),(struct sockaddr *) &recv_addr ,recv_len);
   } else {            
@@ -137,7 +137,7 @@ void handleReciever (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
       std::cout << "Sending Duplicate ack for " << header.seq<< ": " << recieverState.lastRecievedSeq +1 << std::endl;
     // Send a repeat request for the out of order packet
     std::unique_ptr<udp_header>k(new udp_header());
-    k->ack = 1;
+    k->ack = AckCodes::SduplicateAck;
     k->seq = recieverState.lastRecievedSeq + 1;
     sendHeader(std::move(k),(struct sockaddr *) &recv_addr ,recv_len);
   }
@@ -146,7 +146,7 @@ void handleReciever (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
 void handleSender (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv_addr , socklen_t recv_len) {
   if (log(3))
     std::cout << "Got ack "<<header.seq << " : "<<senderState.lastAckedNum << std::endl;
-  if (header.ack == 1 && senderState.lastAckedNum > header.seq-1) {
+  if (header.ack == AckCodes::SduplicateAck && senderState.lastAckedNum > header.seq-1) {
     if(log(4))
       std::cout << "Duplicate Ack" << header.seq << std::endl;
     // Then this is a repeat ack 
@@ -230,7 +230,7 @@ void* createReciever (void* args) {
           std::cout << "Recieve timing out " << std::endl;
         // Send a duplicate ack
         std::unique_ptr<udp_header>k(new udp_header());
-        k->ack = 1;
+        k->ack = AckCodes::SduplicateAck;
         k->seq = recieverState.lastRecievedSeq + 1;
         sendHeader(std::move(k),(struct sockaddr *) &recieverState.recv_addr ,recieverState.recv_len);
         senderState.setTime();
@@ -241,27 +241,40 @@ void* createReciever (void* args) {
                                              (struct sockaddr *) &recv_addr , &recv_len) >= 0)) {
         readPacket(buffer,&header,data.get());        
         // Meant for reciever if ack <=0
-        if (header.ack <= 0) {
+        if (header.ack == AckCodes::RData || header.ack == AckCodes::RhasFileInfo) {
           recieverState.recv_addr = recv_addr;
           recieverState.recv_len = recv_len;
         } else {
           senderState.recv_addr = recv_addr;
           senderState.recv_len = recv_len;
         }
-
-        if (header.hasFileInfo) {
-          if(log(3))
-            std::cout << "Recieving file info "<< std::endl;
-          if (header.ack <= 0) {
-            handleRecFStat(header,data.get(),recv_addr , recv_len);
-          } else {     
-            handleSenFStat(header,data.get(),recv_addr , recv_len);
-          }
-        } else if (header.ack > 0) {
+        switch (header.ack) {
+        case AckCodes::RhasFileInfo : handleRecFStat(header,data.get(),recv_addr , recv_len);
+          break;
+        case AckCodes::ShasFileInfo : handleSenFStat(header,data.get(),recv_addr , recv_len);
+          break;
+        case AckCodes::RData : handleReciever(header,data.get(),recv_addr , recv_len);
+          break;
+        case AckCodes::SrepeatAck: 
+        case AckCodes::SsuccessAck:
+        case AckCodes::SwrapSequence:
+        case AckCodes::SduplicateAck :          
           handleSender(header,data.get(),recv_addr , recv_len);
-        } else if (header.ack <= 0) {
-          handleReciever(header,data.get(),recv_addr , recv_len);
-        }
+          break;
+        };
+        // if (header.hasFileInfo) {
+        //   if(log(3))
+        //     std::cout << "Recieving file info "<< std::endl;
+        //   if (header.ack <= 0) {
+
+        //   } else {     
+
+        //   }
+        // } else if (header.ack > 0) {
+          
+        // } else if (header.ack <= 0) {
+          
+        // }
         // Blank the buffer
         bzero(buffer, sizeof(buffer));       
       }
@@ -287,7 +300,7 @@ int sendBuffer(sockaddr_in clientaddr,char* data , int seq) {
   long waitTime ;
   // No ack present , represented by setting it to 0
   k.hasFileInfo = false;
-  k.ack = 0;
+  k.ack = AckCodes::RData;
   k.seq = seq;  
   writeToBuffer(packet, &k , data);
   if(log(4))
@@ -325,7 +338,7 @@ int sendFileInfo(sockaddr_in clientaddr,string name) {
   bzero(buffer,PACKET_SIZE);
   udp_header header;
   header.hasFileInfo = true;
-  header.ack = -1;
+  header.ack = AckCodes::RhasFileInfo;
   fileInfo finfo,*nf;
   nf = new fileInfo();
   finfo.size = size;

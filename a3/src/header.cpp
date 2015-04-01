@@ -5,7 +5,7 @@
 #ifndef __HEADER_CPP__
 #define __HEADER_CPP__ 1 
 using std::string;
-enum AckCodes {
+enum class AckCodes : int {
   RhasFileInfo,
   RData,
   ShasFileInfo,
@@ -14,6 +14,7 @@ enum AckCodes {
   SsuccessAck,
   SwrapSequence
 };
+
 /** Header struct , parsing and setting **/
 struct udp_header {
   uint16_t ttl;  
@@ -24,7 +25,8 @@ struct udp_header {
   // In reality even 16 bit is ok
   // sequnece number and ack are limited by window size - manually by the program
   uint32_t seq;  
-  int32_t ack;
+  //int32_t ack;
+  AckCodes ack;
   // Md5 hash of file - Any file sent has its md5 hash stored in a hashmap at server and client side to denote file info
   // This hash is used to identify the file while downloading 
   // char hash[16];
