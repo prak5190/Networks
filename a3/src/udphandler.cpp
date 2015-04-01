@@ -30,6 +30,7 @@ void handleRecFStat (udp_header header , char* data , sockaddr_in recv_addr , so
   recieverState.setRTT();
   recieverState.filename = string(fs.filename);
   recieverState.initialFileSize = recieverState.fileSize = fs.size;
+  recieverState.isRecieving = true;
   recieverState.windowCounter = 0;
   recieverState.windowSize = 1;
   recieverState.lastRecievedSeq = -1;
@@ -51,6 +52,7 @@ void handleSenFStat (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
   senderState.expSeqNum = 99999999;
   senderState.windowCounter = 0;
   senderState.lastAckedNum = -1;        
+  senderState.isSending = true;
   // Default window Size 
   senderState.windowSize = 1;
   senderState.resume();
@@ -64,10 +66,13 @@ void handleReciever (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
     std::cout << "Header seq " << header.seq << " Next " << recieverState.lastRecievedSeq + 1<<std::endl; 
 
   if (app.hasDrops) {
+    
     srandom(clock());
     // If random num is greater than 100 * prob
     if (random() %100 < (app.drop_probability * 100)) {
       // Drop packet
+      if(log(4.5))
+        std::cout << "Dropping packet "<< header.seq << std::endl;
       return;
     }
   }
@@ -106,8 +111,8 @@ void handleReciever (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
         if (!recieverState.fileClosed){
           if(log(6))
             std::cout << "Download finished " << std::endl;
+          recieverState.fileClosed = true;          
           closeFile("temp");
-          recieverState.fileClosed = true;
         }
       }
     } else {
@@ -146,22 +151,9 @@ void handleReciever (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
 void handleSenderSelective (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv_addr , socklen_t recv_len) {
 }
 void handleSender (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv_addr , socklen_t recv_len) {
-  if (log(3))
+  if (log(4))
     std::cout << "Got ack "<<header.seq << " : "<<senderState.lastAckedNum << std::endl;
-  if (header.ack == AckCodes::SduplicateAck && senderState.lastAckedNum > header.seq-1) {
-    if(log(4))
-      std::cout << "Duplicate Ack" << header.seq << std::endl;
-    // Then this is a repeat ack 
-    // reset the expected seqnum
-    senderState.lastAckedNum = header.seq-1;
-    senderState.expSeqNum = header.seq;
-    if (log(3.4))
-      std::cout << "Doing multiplicative decrease " << std::endl;
-    // Duplicate ack indicates packet loss - Reduce 
-    senderState.windowSize /= 2;
-    printSenderStatistics();
-    senderState.resume();
-  } else if (header.seq > senderState.lastAckedNum + 1){
+  if (header.seq >= senderState.lastAckedNum + 1) {
     int skip = header.seq - senderState.lastAckedNum;
     senderState.lastAckedNum = header.seq - 1;
     // Refresh RTT for successful ack
@@ -171,12 +163,28 @@ void handleSender (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv
     // Either reduce by skip or make it 0 - window can't be negative       
     senderState.windowCounter -= senderState.windowCounter - skip > 0 ? skip : senderState.windowCounter;
     // Got an ack - Lets increase window size - Additive increase
-    if (senderState.windowSize < app.max_window_size)
-      senderState.windowSize += 1;
+    if (senderState.windowSize < app.max_window_size) {
+      if (senderState.isAimdorSlow)
+        senderState.windowSize += 1;
+      else // Time for some exponential increase -> slow start
+        senderState.windowSize += senderState.windowSize;
+      if (senderState.windowSize > app.max_window_size) 
+        senderState.windowSize = app.max_window_size;
+    }
     printSenderStatistics();
     // Then this is an ack , send it to the senderThread if window is full
     //if (senderState.windowCounter > senderState.windowSize) {
     senderState.resume();
+  } else if (header.ack == AckCodes::SduplicateAck && senderState.lastAckedNum > header.seq-1) {
+    if(log(4.5))
+      std::cout << "Duplicate Ack" << header.seq << std::endl;
+    // Then this is a repeat ack 
+    // reset the expected seqnum
+    senderState.lastAckedNum = header.seq-1;
+    senderState.expSeqNum = header.seq;
+    if (log(3.4))
+      std::cout << "Doing multiplicative decrease " << std::endl;
+    senderState.handleDrop();
   } else {
     // Already ack recieved for this -- Just a repeat ack - ignore
   }
@@ -222,6 +230,8 @@ void* createReciever (void* args) {
     
     // Give random delays using sleep -- Happens on both server and client side
     if (app.hasLatency) {
+      if(log(4.5))
+        std::cout << "Creating latency " << std::endl;
       srandom(clock());
       usleep(1000* (random() % 10) * (app.latencyTime / 10));
     };
@@ -230,8 +240,10 @@ void* createReciever (void* args) {
       perror("select"); // error occurred in select()
     } else if (rv == 0) {
       // Represents timeout
-      if (0 && senderState.isSending) {
-        std::cout << "Sender hasn't got an ack" << std::endl;
+      if (senderState.isSending) {
+        if (log(5))
+          std::cout << "Sender timing out" << std::endl;
+        senderState.handleDrop();
       }
       if (recieverState.isRecieving){
         if(log(5))
@@ -241,7 +253,7 @@ void* createReciever (void* args) {
         k->ack = AckCodes::SduplicateAck;
         k->seq = recieverState.lastRecievedSeq + 1;
         sendHeader(std::move(k),(struct sockaddr *) &recieverState.recv_addr ,recieverState.recv_len);
-        senderState.setTime();
+        recieverState.setTime();
       }
     } else {
       // one or both of the descriptors have data
@@ -284,7 +296,7 @@ int sendBuffer(sockaddr_in clientaddr,char* data , int seq) {
     return senderState.expSeqNum;
   } else if (senderState.expSeqNum == senderState.lastAckedNum) {
     senderState.expSeqNum = senderState.lastAckedNum + 1;    
-  }  
+  }
   if (seq < senderState.lastAckedNum + 1) {
     // Don't resend old - send new 
     return senderState.lastAckedNum + 1;
@@ -365,9 +377,10 @@ int sendToClient(sockaddr_in clientaddr,const char *respath , long start , long 
     if (senderState.windowCounter > senderState.windowSize) {    
       timespec time;  
       if(log(4.5))
-        std::cout << "Sender RTT " << senderState.rtt << std::endl;
+        std::cout << "Sender RTT " << senderState.rtt << " : WIndow Size " << senderState.windowSize <<" : Win Counter " << senderState.windowCounter << std::endl;
       error = senderState.waitTime(senderState.rtt);
       if (error == ETIMEDOUT) {
+        senderState.handleDrop();
         // Resend from the last acked part
         expSeq = senderState.lastAckedNum + 1;
       };
@@ -383,8 +396,9 @@ int sendToClient(sockaddr_in clientaddr,const char *respath , long start , long 
     }
     if (expSeq == -1 && (seq < maxSeq || maxSeq == -1 )) 
       seq++;
-    else
+    else {
       seq = expSeq;
+    }
     if(log(4))
       std::cout << "Last acked Num " << senderState.lastAckedNum << std::endl;
     if (senderState.lastAckedNum >= maxSeq && maxSeq != -1) 
@@ -392,6 +406,7 @@ int sendToClient(sockaddr_in clientaddr,const char *respath , long start , long 
   }
   if(log(6))
     std::cout << "Finished " << std::endl;
+  exit(0);
 }
 
 // Threaded apps

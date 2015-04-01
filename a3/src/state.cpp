@@ -1,6 +1,7 @@
 #include "common.cpp"
 #ifndef __STATE_CPP__
 #define __STATE_CPP__ 1 
+void printSenderStatistics();
 struct appglobals {
   int socket;
   // This mutex tells the sender to wait when window is filled
@@ -18,7 +19,7 @@ struct SenderState {
   timespec  *lastMsgTime; 
   // Rtt in milliseconds
   long rtt = 0;
-  bool isSending;
+  bool isSending ,isAimdorSlow;
   // Address of last reciever 
   sockaddr_in  recv_addr;
   socklen_t recv_len;
@@ -29,6 +30,18 @@ struct SenderState {
   }
   void resume() {
     thread_resume(this->mut, this->cond);
+  }
+  void handleDrop() {
+    this->isAimdorSlow = true;
+    this->windowCounter = 0;
+    if (this->isAimdorSlow) {
+      this->windowSize = this->windowSize / 2;
+    } else {
+      this->windowSize = 1;
+    }
+    printSenderStatistics();
+    this->resume();
+
   }
   int waitTime(long ms) {
     return thread_timed_wait(this->mut,this->cond,ms);
@@ -127,6 +140,8 @@ struct RecieverState {
     }
     this->setTime();
   }
+  void handleDrop() {
+  }
 
   ~RecieverState () {
     delete this->lastMsgTime;
@@ -153,8 +168,10 @@ long oldWindowSize;
 void printSenderStatistics() {
   if (senderState.windowSize != oldWindowSize) {    
     if (senderState.windowSize - oldWindowSize == 1)
-      std::cout << "In slow Start : ";
+      std::cout << "In Additive increase : ";
     else if (oldWindowSize!= 0 &&   senderState.windowSize/oldWindowSize == 2) 
+      std::cout << "In Slow Start : ";
+    else if (senderState.windowSize!= 0 &&   oldWindowSize/senderState.windowSize == 2) 
       std::cout << "In Multiplicative decrease : ";
     std::cout << "Max Window Size " << senderState.windowSize << " : Window Counter  " << senderState.windowCounter << std::endl;
     oldWindowSize = senderState.windowSize;

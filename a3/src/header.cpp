@@ -17,7 +17,6 @@ enum class AckCodes : uint16_t {
 
 /** Header struct , parsing and setting **/
 struct udp_header {
-  uint16_t ttl;  
   uint16_t window_size;
   // // Total length 
   // uint64 length;

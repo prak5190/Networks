@@ -3,14 +3,13 @@
 using std::cout;
 using std::endl;
 
-void initApp(appglobals *app , int port) {
+void initApp(appglobals *app) {
   int s = initSocket();
   app->socket = s;
   app->mut     = PTHREAD_MUTEX_INITIALIZER;
   app->cond   = PTHREAD_COND_INITIALIZER;
   app->isDupElseSel = true;
-  app->max_window_size = 100;
-  app->recieve_port = port;
+  app->max_window_size = 100;  
   app->hasLatency = false;
   app->hasDrops = false;
   app->latencyTime = 20;
@@ -26,6 +25,7 @@ int main (int argc , char** argv) {
   int senderThread , recThread;
   thread_args *args = new thread_args();  
   int c,i;
+  initApp(&app);
   while ((c = getopt (argc, argv, "srW:D:L:")) != -1) {
     switch(c) {
     case 's' : isSender = true;
@@ -56,8 +56,7 @@ int main (int argc , char** argv) {
   if (isReceiver) {
     // Means reciever
     port = atoi(argv[argc-1]);    
-    initApp(&app,port);
-
+    app.recieve_port = port;
     if ((recThread = pthread_create(&rthread , NULL ,createReciever, args)) == 0) {
       cout<<"Server created listening at "<< port <<endl;
     };
@@ -67,7 +66,7 @@ int main (int argc , char** argv) {
   } else if (isSender) {    
     // Use port as 0 - means bind to any port 
     port = 0;
-    initApp(&app,port);
+    app.recieve_port = port;
     if ((recThread = pthread_create(&rthread , NULL ,createReciever, args)) == 0) {
       std::cout << "Listner initialised "  << std::endl;
     };

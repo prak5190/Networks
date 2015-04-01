@@ -49,7 +49,7 @@ int timespec_milliseconds(struct timespec *a)
 /****** Jacob orams algo ***********************/
 // All calculations in millis
 long calculateRTT(long sampleRtt , long estRtt , long deviation) {
-  if (sampleRtt == 0)
+  if (sampleRtt <= 0)
     return estRtt;
   if(log(4))
     std::cout << "Sample "<<sampleRtt << " estRtt " <<estRtt << " Dev " << deviation << std::endl;
