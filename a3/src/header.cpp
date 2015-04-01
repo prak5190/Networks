@@ -30,9 +30,6 @@ struct udp_header {
   // Md5 hash of file - Any file sent has its md5 hash stored in a hashmap at server and client side to denote file info
   // This hash is used to identify the file while downloading 
   // char hash[16];
-  // This indicates if the data only contains file info - When true the data will contain all the info about the hash in the 
-  // header - This currently just means file name and size    
-  bool hasFileInfo;
 };
 
 struct fileInfo { 

@@ -37,8 +37,6 @@ void handleRecFStat (udp_header header , char* data , sockaddr_in recv_addr , so
   std::unique_ptr<udp_header>k(new udp_header());
   // Any non-0 number indicates ack for fileInfo
   k->ack = AckCodes::ShasFileInfo;
-  k->hasFileInfo = true;
-  sleep(2);
   sendHeader(std::move(k),(struct sockaddr *) &recv_addr ,recv_len);
 }
 
@@ -48,7 +46,6 @@ void handleSenFStat (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
   senderState.setRTT();
   std::unique_ptr<udp_header>k(new udp_header());
   // k->ack = -1;
-  // k->hasFileInfo = true;
   // sendHeader(std::move(k),(struct sockaddr *) &recv_addr ,recv_len);
   // TODO need to replace with Seq_max or something
   senderState.expSeqNum = 99999999;
@@ -299,7 +296,7 @@ int sendBuffer(sockaddr_in clientaddr,char* data , int seq) {
   int error;
   long waitTime ;
   // No ack present , represented by setting it to 0
-  k.hasFileInfo = false;
+  //k.hasFileInfo = false;
   k.ack = AckCodes::RData;
   k.seq = seq;  
   writeToBuffer(packet, &k , data);
@@ -337,7 +334,6 @@ int sendFileInfo(sockaddr_in clientaddr,string name) {
   char buffer[PACKET_SIZE];
   bzero(buffer,PACKET_SIZE);
   udp_header header;
-  header.hasFileInfo = true;
   header.ack = AckCodes::RhasFileInfo;
   fileInfo finfo,*nf;
   nf = new fileInfo();
