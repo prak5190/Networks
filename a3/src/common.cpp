@@ -28,6 +28,12 @@
 #include <netdb.h>
 #include <string.h>
 #include <pthread.h>
+//0-10
+float LOG_LEVEL = 5;
+bool log(float level) {
+  return level >= LOG_LEVEL ? true : false;
+}
+
 #include "timeutil.cpp"
 #include "header.cpp"
 #include "fileHandler.cpp"

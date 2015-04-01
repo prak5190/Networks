@@ -51,7 +51,8 @@ int timespec_milliseconds(struct timespec *a)
 long calculateRTT(long sampleRtt , long estRtt , long deviation) {
   if (sampleRtt == 0)
     return estRtt;
-  std::cout << "Sample "<<sampleRtt << " estRtt " <<estRtt << " Dev " << deviation << std::endl;
+  if(log(4))
+    std::cout << "Sample "<<sampleRtt << " estRtt " <<estRtt << " Dev " << deviation << std::endl;
   // 3 is bacase of sigma = 1/8 - i.e unshift by 3
   sampleRtt -= (estRtt >> 3) ;
   estRtt += sampleRtt; 

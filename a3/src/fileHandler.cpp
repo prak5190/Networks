@@ -72,6 +72,8 @@ int getFileSize(string name) {
   } else {
     // Open the file -- Create if not present
     fd = std::fopen(name.c_str(), "rb");
+    if (fd == NULL)
+      return -1;
     RFileDescriptorMap.insert(std::make_pair(name , fd));
   }
   struct stat fileStat;

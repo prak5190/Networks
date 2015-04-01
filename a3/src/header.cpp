@@ -126,7 +126,7 @@ struct RecieverState {
   // Rtt in milliseconds
   long rtt = 0;
   long totalPackets;
-
+  bool fileClosed;
   // Address of last reciever 
   sockaddr_in  recv_addr;
   socklen_t recv_len;
