@@ -11,6 +11,11 @@ void initApp(appglobals *app , int port) {
   app->isDupElseSel = true;
   app->max_window_size = 100;
   app->recieve_port = port;
+  
+  app->hasLatency = false;
+  app->hasDrops = false;
+  app->latencyTime = 20;
+  app->drop_probability = 0.3;
 };
 
 int main (int argc , char** argv) {

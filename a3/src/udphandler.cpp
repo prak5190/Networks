@@ -1,7 +1,7 @@
 #include "common.cpp"
 
 int sendPacket(sockaddr* addr, socklen_t size , char* packet) {
-  int socket = app.socket;
+  int socket = app.socket;  
   return sendto(socket,packet , PACKET_SIZE, 0, addr ,size);
 };
 // Send header
@@ -17,7 +17,7 @@ int sendFileRequest (const char* fname , sockaddr* addr, socklen_t size) {
   fileInfo info;
   strcpy(info.filename,fname);
   udp_header header;  
-  header.isRequest = true;
+  //header.isRequest = true;
   createRequestPacket(packet , &header , &info);
   // Send the ack
   //sendto(app.socket, packet , PACKET_SIZE, 0, (const sockaddr*) &forw->clientaddr ,sizeof(sockaddr_in))
@@ -29,7 +29,7 @@ void handleRecFStat (udp_header header , char* data , sockaddr_in recv_addr , so
   memcpy(&fs, data , sizeof(fileInfo));   
   
   recieverState.filename = string(fs.filename);
-  recieverState.fileSize = fs.size;
+  recieverState.initialFileSize = recieverState.fileSize = fs.size;
   recieverState.windowCounter = 0;
   recieverState.windowSize = 1;
   recieverState.lastRecievedSeq = -1;
@@ -62,6 +62,16 @@ void handleSenFStat (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
 void handleReciever (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv_addr , socklen_t recv_len) { 
   if (log(3))
     std::cout << "Header seq " << header.seq << " Next " << recieverState.lastRecievedSeq + 1<<std::endl; 
+
+  if (app.hasDrops) {
+    srandom(clock());
+    // If random num is greater than 100 * prob
+    if (random() %100 < (app.drop_probability * 100)) {
+      // Drop packet
+      return;
+    }
+  }
+  
   recieverState.windowSize = header.window_size;
   recieverState.windowCounter--;
   if (header.seq == recieverState.lastRecievedSeq + 1) {
@@ -82,6 +92,7 @@ void handleReciever (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
         assembleFile("temp",-1,data,writeSize,false);
         recieverState.fileSize -= writeSize;
       };      
+      printRecProgress();
       recieverState.windowCounter++;
       // Send out an Acknowledge when counter > win Size/2
       if (recieverState.windowCounter > recieverState.windowSize / 2 || recieverState.fileSize <= 0) {
@@ -200,6 +211,13 @@ void* createReciever (void* args) {
   while(1) {
     rv = select(selectN, &readfds, NULL, NULL, &tv);
     tv.tv_sec = 5;
+
+    // Give random delays using sleep -- Happens on both server and client side
+    if (app.hasLatency) {
+      srandom(clock());
+      usleep(1000* (random() % 10) * (app.latencyTime / 10));
+    };
+
     if (rv == -1) {
       perror("select"); // error occurred in select()
     } else if (rv == 0) {

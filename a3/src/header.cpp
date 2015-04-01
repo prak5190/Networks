@@ -5,6 +5,15 @@
 #ifndef __HEADER_CPP__
 #define __HEADER_CPP__ 1 
 using std::string;
+enum AckCodes {
+  RhasFileInfo,
+  RData,
+  ShasFileInfo,
+  SduplicateAck,
+  SrepeatAck,
+  SsuccessAck,
+  SwrapSequence
+};
 /** Header struct , parsing and setting **/
 struct udp_header {
   uint16_t ttl;  
@@ -22,7 +31,6 @@ struct udp_header {
   // This indicates if the data only contains file info - When true the data will contain all the info about the hash in the 
   // header - This currently just means file name and size    
   bool hasFileInfo;
-  bool isRequest;
 };
 
 struct fileInfo { 
@@ -60,6 +68,10 @@ struct appglobals {
   long max_window_size;
   int recieve_port;
   bool isDupElseSel;
+
+  bool hasLatency, hasDrops;
+  long latencyTime;
+  float drop_probability;
 };
 struct SenderState {
   long windowSize, seqNum , expSeqNum = 999999999 , lastAckedNum, windowCounter;
@@ -122,6 +134,7 @@ struct RecieverState {
   bool isRecieving;
   long windowSize, lastRecievedSeq , seqBase , seqMax,windowCounter , fileSize;
   timespec  *lastMsgTime; 
+  long initialFileSize;
   string filename;
   // Rtt in milliseconds
   long rtt = 0;
@@ -245,6 +258,20 @@ void writeToBuffer(char* buffer, udp_header *header, const char* data) {
   memcpy(buffer, header, sz);
   memcpy(&buffer[sz] , data , PACKET_SIZE - sz);
 };
+
+// Print Utils 
+float lastProgress;
+void printRecProgress() {
+  float progress = ((recieverState.initialFileSize - recieverState.fileSize)) * 100/ (recieverState.initialFileSize); 
+  //std::cout << "Progress " << progress << std::endl;
+  if (progress > lastProgress + 0.5) {
+    if (((int)progress) % 10 == 0)
+      std::printf("Progress %.0f \n", progress);
+    lastProgress = progress;
+  }
+  //   std::printf("Progress %.2f \r", progress);
+  // }
+}
 
 #endif
 

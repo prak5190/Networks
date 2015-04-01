@@ -155,7 +155,7 @@ void testFileInfo() {
   fileInfo finfo;
   fileInfo *nf = new fileInfo();
   finfo.size = getFileSize(name);
-  finfo.filename = "Something";
+  //finfo.filename = "Something";
   createRequestPacket(buffer, &header, &finfo);
   readPacket(buffer , &n ,data);
   std::cout << "Has info" << n.hasFileInfo << std::endl;
@@ -164,7 +164,9 @@ void testFileInfo() {
   std::cout << "Finfo " << nf->size << std::endl;
 }
 int main(int argus , char **argv){
-  testFileInfo();
+  //testFileInfo();
+  srandom(clock());
+  std::cout << random() %100 << std::endl;
   return 0;
 }
 
