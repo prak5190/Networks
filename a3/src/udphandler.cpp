@@ -27,6 +27,8 @@ int sendFileRequest (const char* fname , sockaddr* addr, socklen_t size) {
 void handleRecFStat (udp_header header , char* data , sockaddr_in recv_addr , socklen_t recv_len) {
   fileInfo fs; // = new fileInfo();  
   memcpy(&fs, data , sizeof(fileInfo));   
+  if (log(4.5))
+    std::cout << "Got Rec FStat "<<(int)header.ack << std::endl;
   recieverState.setRTT();
   recieverState.filename = string(fs.filename);
   recieverState.initialFileSize = recieverState.fileSize = fs.size;
@@ -34,6 +36,7 @@ void handleRecFStat (udp_header header , char* data , sockaddr_in recv_addr , so
   recieverState.windowCounter = 0;
   recieverState.windowSize = 1;
   recieverState.lastRecievedSeq = -1;
+  std::cout << "Destination port is " << recv_addr.sin_port << std::endl;
   // Send an ack
   std::unique_ptr<udp_header>k(new udp_header());
   // Any non-0 number indicates ack for fileInfo
@@ -45,8 +48,6 @@ void handleSenFStat (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
   // Thanks for the ack - now senderThread moves on        
   // Acknowledge the ack
   senderState.setRTT();
-  std::unique_ptr<udp_header>k(new udp_header());
-  // k->ack = -1;
   // sendHeader(std::move(k),(struct sockaddr *) &recv_addr ,recv_len);
   // TODO need to replace with Seq_max or something
   senderState.expSeqNum = 99999999;
@@ -227,7 +228,6 @@ void* createReciever (void* args) {
   while(1) {
     rv = select(selectN, &readfds, NULL, NULL, &tv);
     tv.tv_sec = 5;
-    
     // Give random delays using sleep -- Happens on both server and client side
     if (app.hasLatency) {
       if(log(4.5))
@@ -241,12 +241,12 @@ void* createReciever (void* args) {
     } else if (rv == 0) {
       // Represents timeout
       if (senderState.isSending) {
-        if (log(5))
+        if (log(4.5))
           std::cout << "Sender timing out" << std::endl;
         senderState.handleDrop();
       }
       if (recieverState.isRecieving){
-        if(log(5))
+        if(log(4.5))
           std::cout << "Recieve timing out " << std::endl;
         // Send a duplicate ack
         std::unique_ptr<udp_header>k(new udp_header());
@@ -344,6 +344,7 @@ int sendFileInfo(sockaddr_in clientaddr,string name) {
   do {
     sendPacket((sockaddr*) &clientaddr , clientlen , buffer);
     error = senderState.waitTime(rtt);
+    senderState.setRTT();
   } while(error == ETIMEDOUT);  
   if(log(4))
     std::cout << "Got ack from reciever " << std::endl;

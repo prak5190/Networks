@@ -6,6 +6,7 @@
 #define __HEADER_CPP__ 1 
 using std::string;
 enum class AckCodes : uint16_t {
+  // Give some dummy
   RhasFileInfo,
   RData,
   ShasFileInfo,

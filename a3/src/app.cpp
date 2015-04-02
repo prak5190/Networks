@@ -12,7 +12,7 @@ void initApp(appglobals *app) {
   app->max_window_size = 100;  
   app->hasLatency = false;
   app->hasDrops = false;
-  app->latencyTime = 20;
+  app->latencyTime = 20;  
   app->drop_probability = 0.3;
 };
 
@@ -26,7 +26,7 @@ int main (int argc , char** argv) {
   thread_args *args = new thread_args();  
   int c,i;
   initApp(&app);
-  while ((c = getopt (argc, argv, "srW:D:L:")) != -1) {
+  while ((c = getopt (argc, argv, "srW:D:L:g:")) != -1) {
     switch(c) {
     case 's' : isSender = true;
       break;
@@ -40,6 +40,9 @@ int main (int argc , char** argv) {
     case 'D' : 
       app.hasLatency = true;
       app.latencyTime = atoi(optarg);
+      break;
+    case 'g' : 
+      LOG_LEVEL = atof(optarg);
       break;
     case 'L' : 
       app.hasLatency = true;
