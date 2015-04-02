@@ -17,9 +17,10 @@ struct appglobals {
 struct SenderState {
   long windowSize, seqNum , expSeqNum = 999999999 , lastAckedNum, windowCounter;
   timespec  *lastMsgTime; 
+  timespec startTime;
   // Rtt in milliseconds
   long rtt = 0;
-  bool isSending ,isAimdorSlow;
+  bool isSending ,isAimdorSlow = false;
   // Address of last reciever 
   sockaddr_in  recv_addr;
   socklen_t recv_len;
@@ -31,19 +32,62 @@ struct SenderState {
   void resume() {
     thread_resume(this->mut, this->cond);
   }
-  void handleDrop() {
-    this->isAimdorSlow = true;
+  long slowStartTransferredSize,fileSize;
+  void printFinalStats() {
+    double slowPercent =(double) (this->slowStartTransferredSize * 100) /this->fileSize ;
+    std::cout << this->slowStartTransferredSize << std::endl;
+    std::cout << this->fileSize << std::endl;    
+    std::cout << "Percentage transferred in slow Start " << slowPercent  << std::endl;
+    std::cout << "Percentage transferred in AIMD " << 100-slowPercent << std::endl;
+    timespec curr;
+    timespec_now(&curr);
+    timespec_subtract(&curr, &(this->startTime));
+    long timeTaken =  timespec_milliseconds(&curr);
+    std::cout << "Time take in milliseconds " <<timeTaken << std::endl;    
+  }
+  bool isCongested;
+  long flipWindowSize;
+  void handleWindow(bool increase) {
+    if (increase) {
+      if (this->isAimdorSlow) {
+        if (this->windowSize < app.max_window_size)
+          this->windowSize += 1;
+      } else {
+        if (this->isCongested) {
+          if (this->windowSize * 2 < this->flipWindowSize) {
+            this->windowSize += this->windowSize;
+          } else {
+            this->slowStartTransferredSize = (this->lastAckedNum + 1) * DATA_SIZE;
+            this->isAimdorSlow = true;            
+            this->windowSize+= 1;
+          }            
+        } else
+          this->windowSize += this->windowSize;
+      }
+      
+      if (this->windowSize > app.max_window_size) 
+        this->windowSize = app.max_window_size;
+    } else {
+      this->handleDrop();
+    }
+  }
+  void handleDrop() {    
+    //this->isAimdorSlow = true;    
+    if (log(4.5))
+      std::cout << "Packet Dropped" << std::endl;    
     this->windowCounter = 0;
     if (this->isAimdorSlow) {
       this->windowSize = this->windowSize / 2;
     } else {
+      this->isCongested = true;
       this->windowSize = 1;
     }
     printSenderStatistics();
     this->resume();
-
   }
   int waitTime(long ms) {
+    // RTT in ms , so lets take some margin
+    ms  += 10;
     return thread_timed_wait(this->mut,this->cond,ms);
   }
   void setTime() {

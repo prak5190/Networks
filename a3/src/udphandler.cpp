@@ -34,7 +34,7 @@ void handleRecFStat (udp_header header , char* data , sockaddr_in recv_addr , so
   recieverState.initialFileSize = recieverState.fileSize = fs.size;
   recieverState.isRecieving = true;
   recieverState.windowCounter = 0;
-  recieverState.windowSize = 1;
+  recieverState.windowSize = 1;  
   recieverState.lastRecievedSeq = -1;
   std::cout << "Destination port is " << recv_addr.sin_port << std::endl;
   // Send an ack
@@ -101,7 +101,7 @@ void handleReciever (udp_header header , char data[PACKET_SIZE] , sockaddr_in re
       printRecProgress();
       recieverState.windowCounter++;
       // Send out an Acknowledge when counter > win Size/2
-      if (recieverState.windowCounter > recieverState.windowSize / 2 || recieverState.fileSize <= 0) {
+      if (1 || recieverState.windowCounter >= recieverState.windowSize / 2 || recieverState.fileSize <= 0) {
         // Send an ack for half the window size
         std::unique_ptr<udp_header>k(new udp_header());
         k->ack = AckCodes::SsuccessAck;
@@ -163,15 +163,7 @@ void handleSender (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv
       std::cout << "Ack accepted " << header.seq << " Skipping " << skip << std::endl;
     // Either reduce by skip or make it 0 - window can't be negative       
     senderState.windowCounter -= senderState.windowCounter - skip > 0 ? skip : senderState.windowCounter;
-    // Got an ack - Lets increase window size - Additive increase
-    if (senderState.windowSize < app.max_window_size) {
-      if (senderState.isAimdorSlow)
-        senderState.windowSize += 1;
-      else // Time for some exponential increase -> slow start
-        senderState.windowSize += senderState.windowSize;
-      if (senderState.windowSize > app.max_window_size) 
-        senderState.windowSize = app.max_window_size;
-    }
+    senderState.handleWindow(true);
     printSenderStatistics();
     // Then this is an ack , send it to the senderThread if window is full
     //if (senderState.windowCounter > senderState.windowSize) {
@@ -183,9 +175,10 @@ void handleSender (udp_header header , char data[PACKET_SIZE] , sockaddr_in recv
     // reset the expected seqnum
     senderState.lastAckedNum = header.seq-1;
     senderState.expSeqNum = header.seq;
-    if (log(3.4))
+    if (log(3.6))
       std::cout << "Doing multiplicative decrease " << std::endl;
-    senderState.handleDrop();
+    senderState.handleWindow(false);
+
   } else {
     // Already ack recieved for this -- Just a repeat ack - ignore
   }
@@ -243,7 +236,8 @@ void* createReciever (void* args) {
       if (senderState.isSending) {
         if (log(4.5))
           std::cout << "Sender timing out" << std::endl;
-        senderState.handleDrop();
+        senderState.handleWindow(false);
+        //senderState.handleDrop();
       }
       if (recieverState.isRecieving){
         if(log(4.5))
@@ -320,9 +314,12 @@ int sendFileInfo(sockaddr_in clientaddr,string name) {
   int sfd = app.socket;  
   socklen_t clientlen = sizeof(clientaddr);
   long size = getFileSize(name);
+  
   if (size == -1) {
     return -1;
   }
+  senderState.fileSize = size;
+  senderState.slowStartTransferredSize = size;
   char buffer[PACKET_SIZE];
   bzero(buffer,PACKET_SIZE);
   udp_header header;
@@ -342,6 +339,8 @@ int sendFileInfo(sockaddr_in clientaddr,string name) {
   if (senderState.rtt == 0)
    rtt = 2000;  
   do {
+    if(log(4))
+      std::cout << "Waiting for file Ack" << std::endl;       
     sendPacket((sockaddr*) &clientaddr , clientlen , buffer);
     error = senderState.waitTime(rtt);
     senderState.setRTT();
@@ -375,13 +374,16 @@ int sendToClient(sockaddr_in clientaddr,const char *respath , long start , long 
     }
     // Do something with the buffer_size
     expSeq = sendBuffer(clientaddr,buffer, seq);
-    if (senderState.windowCounter > senderState.windowSize) {    
+    if (senderState.windowCounter >= senderState.windowSize) {    
       timespec time;  
       if(log(4.5))
         std::cout << "Sender RTT " << senderState.rtt << " : WIndow Size " << senderState.windowSize <<" : Win Counter " << senderState.windowCounter << std::endl;
-      error = senderState.waitTime(senderState.rtt);
+      error = senderState.waitTime(senderState.rtt);      
       if (error == ETIMEDOUT) {
-        senderState.handleDrop();
+        if(log(3.5))
+          std::cout << "Sender Timed out" << std::endl;
+        senderState.handleWindow(false);
+        //senderState.handleDrop();
         // Resend from the last acked part
         expSeq = senderState.lastAckedNum + 1;
       };
@@ -407,6 +409,7 @@ int sendToClient(sockaddr_in clientaddr,const char *respath , long start , long 
   }
   if(log(6))
     std::cout << "Finished " << std::endl;
+  senderState.printFinalStats();
   exit(0);
 }
 
@@ -425,6 +428,7 @@ void* getDataInThread(void* args) {
     if(log(7))
       std::cout << "File not found " << std::endl;    
   } else {
+    timespec_now(&senderState.startTime);
     sendToClient(cl_addr , fname.c_str() , 0 , -1); 
   }   
   return NULL;

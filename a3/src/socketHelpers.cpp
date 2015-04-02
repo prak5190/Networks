@@ -48,6 +48,8 @@ void readPacket(char* buffer , udp_header *header , char* data) {
   size_t sz = sizeof(udp_header);
   memcpy(header , buffer , sz);
   memcpy(data , &buffer[sz]  , PACKET_SIZE - sz);
+  if (log(2.9))
+    std::cout << "Got a header " << header->seq << ": " << (int) header->ack << std::endl;
 };
 void readPacket(char* buffer , udp_header *header , fileInfo *data) {
   if (buffer == NULL)
