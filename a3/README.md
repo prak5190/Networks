@@ -1,8 +1,14 @@
 ## Reliable UDP
+#### Name : Prakash Rajagopal
 
 #### Usage :
-- Run a ./app with port as argument. This is the receiver listening on the named port
-- Run another ./app with filename, destination ip and port. This is the sender which sends the file to the receiver
+- Run `make scl` on silo and `make` to create app
+- Run a `./app` with port as argument. This is the receiver listening on the named port
+  `app -r 9000`
+  The received file is saved with name `temp`
+- Run another `./app` with filename, destination ip and port. This is the sender which sends the file to the receiver
+  `app -s file localhost 9000`
+  The file will be found in the `www` directory  
 - Examples can be found in the makefile
 
 #### Header structure :

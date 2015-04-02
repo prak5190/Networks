@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<title>README.html</title>
+
+</head>
+
+<body>
+
+<h2>Reliable UDP</h2>
+
+<h4>Name : Prakash Rajagopal</h4>
+
+<h4>Usage :</h4>
+
+<ul>
+<li>Run <code>make scl</code> on silo and <code>make</code> to create app</li>
+<li>Run a <code>./app</code> with port as argument. This is the receiver listening on the named port
+<code>app -r 9000</code>
+The received file is saved with name <code>temp</code></li>
+<li>Run another <code>./app</code> with filename, destination ip and port. This is the sender which sends the file to the receiver
+<code>app -s file localhost 9000</code>
+The file will be found in the <code>www</code> directory  </li>
+<li>Examples can be found in the makefile</li>
+</ul>
+
+<h4>Header structure :</h4>
+
+<ul>
+<li>Present in <code>header.cpp</code></li>
+<li>Sequence number</li>
+<li>Ack represents message type and is an 16bit integer represented as an enum in the program. In the enum if it starts with R then message is transmitted to receiver and if it starts with S then it is for the sender.
+<ul>
+<li>RhasFileInfo    - Represents that packet has file information</li>
+<li>RData           - Represent normal data message </li>
+<li>ShasFileInfo    - A file info ack for the sender, sender starts transmitting message</li>
+<li>SduplicateAck   - Duplicate ack, Go back N and repeat</li>
+<li>SrepeatAck      - A repeat ack to indicate that reciever has already got the packet and ensure there is no wait lock at sender side</li>
+<li>SsuccessAck     - Normal success ack</li>
+<li>SwrapSequence   - Ack to indicate wrap sequnce , the sequence number is used as the new base. The number is set as lastAcked and sequence base and all numbers start from 0</li>
+</ul></li>
+</ul>
+
+<h4>Steps :</h4>
+
+<p>Present in <code>udphandler.cpp</code> , where sender functions start with <code>send</code> and all handler functions for getting messages for both reciever and sender are named as <code>handler</code> functions</p>
+
+<pre><code>R: Initially Receiver starts up to listen on named port and receive file
+S: Sender starts and first sends fileInfo -&gt; Name and Size 
+R: Receiver receives and sends ack
+S: Sender waits for an Ack from receiver before proceeding - This is not part of the transfer
+    - This request gives the sender an idea of the RTT
+S: Sender starts sending file chunks on receiving ack until window fills up which initially is : Window_Size = 1 
+    - In each case the RTT is updated whenever a successful ack is received
+R: Receiver receives the packet and sends an  ack with header.seq as 1 + last_recieved_seq
+S: Sender recieves ack and increases window size
+
+R: In case of out of order packet with seq &gt; lastReceived + 1 , then duplicate ack is set
+ : If seq &lt;= lastReceived + 1 then repeating ack is set to ensure that the previous ack was not lost
+ : If timeout occurs then duplicate ack is sent similar to out of order packet
+ : If seq = lastReceived + 1 , then it is a success . Sends a SsuccessAck.
+
+S: If ack is a duplicate ack then treat it as drop and use congestion control. Sequence reset to lastRecievedAck + 1    
+ : If ack seq &gt; lastRecievedAck , then lastRecievedAck = seq - 1. Is a success case , reduce window and resume any waiting threads
+ : If ack has seq &lt; lastRecievedAck ,i.e ack is Srepeatack then it is just ignored
+
+R: When received bytes = fileSize , then reciever sends a final ack, waits for seq+1 msg from sender and exits
+S: When it receives a seq &gt; max_sequence possible then it sends out ack with seq+1 and exits
+ : The final steps can be replaced with a special ack message to complete
+</code></pre>
+
+<h4>Adaptive retransmission - Jacobson/Karels algo</h4>
+
+<p>Timer util methods and jacob karnels is implemented in <code>timeutil.cpp</code></p>
+
+<ul>
+<li>Initially the sender gets an estimated RTT when it sends file info and gets an ack back</li>
+<li>Each succesful receive and send is used to calcualte RTT - since packets always arrive in order, This is done using jacob karnels</li>
+<li>The RTT is displayed for each change</li>
+</ul>
+
+<h4>Congestion control</h4>
+
+<ul>
+<li>Slow start initially</li>
+<li>On each succesful ack the window size is increased by that number</li>
+<li>When a duplicate ack or timeout occurs then we make window size as 1 and make thread wait until it gets acks and window size reduces to 1</li>
+<li>Then we increase window size in same way per ack until it reaches <code>window_size = congestion_window_size/2</code></li>
+<li>On reaching this stage , the app enters AIMD phase - where each ack leads to increase by 1</li>
+<li>Whenever there is a duplicate ack or whenever there is a timeout for an ack at the sender side then the window size is halved.</li>
+</ul>
+
+<h4>Simulate loss and delay</h4>
+
+<ul>
+<li>Drop probability set in app in combinations with <code>srandom(clock())</code> and <code>random()</code> is used to drop packets whenever enabled</li>
+<li>Latency set using <code>srandom(clock())</code> in combination with latency time set in config which is used to make the listener thread (on both receiever and sender) </li>
+<li>Latency using <code>usleep</code> with time as <code>(randomnumbr % 10) * 0.1 * latencyTime</code></li>
+</ul>
+
+<h4>State handling and config</h4>
+
+<p>All of the state variables are declared in <code>state.cpp</code></p>
+
+<ul>
+<li>All the global app config is present in <code>initApp</code> function </li>
+<li>The current state of each operations is stored in <code>senderState</code> and <code>recieverState</code>. This struct also holds RTT , window counter , max size , e.t.c</li>
+<li>This struct also encapsulates the mutex and methods for <code>thread_wait</code> , <code>thread_resume</code> and <code>thread_timedwait</code></li>
+</ul>
+
+</body>
+</html>
