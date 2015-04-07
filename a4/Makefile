@@ -1,4 +1,4 @@
-CC=gcc
+CC=g++
 CPFLAGS=-g -Wall
 LDFLAGS= -lcrypto
 
