@@ -1,3 +1,4 @@
+#include "common.cpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -13,6 +14,69 @@
 
 #include "bt_lib.h"
 #include "bt_setup.h"
+
+void __parse_torrent(bt_info_t* peer, char * peer_st){
+  /*
+  char name[FILE_NAME_MAX]; //name of file
+  int piece_length; //number of bytes in each piece
+  int length; //length of the file in bytes
+  int num_pieces; //number of pieces, computed based on above two values
+  char ** piece_hashes; //pointer to 20 byte data buffers containing the sha1sum of each of the pieces
+  */
+  char * parse_str;
+  char * word;
+  unsigned short port;
+  char * ip;
+  char id[20];
+  char sep[] = ":";
+  int i;
+
+  //need to copy becaus strtok mangels things
+  parse_str = (char*)malloc(strlen(peer_st)+1);
+  strncpy(parse_str, peer_st, strlen(peer_st)+1);
+
+  //only can have 2 tokens max, but may have less
+  for(word = strtok(parse_str, sep), i=0; 
+      (word && i < 3); 
+      word = strtok(NULL,sep), i++){
+
+    printf("%d:%s\n",i,word);
+    switch(i){
+    case 0://id
+      ip = word;
+      break;
+    case 1://ip
+      port = atoi(word);
+    default:
+      break;
+    }
+
+  }
+
+  if(i < 2){
+    fprintf(stderr,"ERROR: Parsing Peer: Not enough values in '%s'\n",peer_st);
+    usage(stderr);
+    exit(1);
+  }
+
+  if(word){
+    fprintf(stderr, "ERROR: Parsing Peer: Too many values in '%s'\n",peer_st);
+    usage(stderr);
+    exit(1);
+  }
+
+
+  //calculate the id, value placed in id
+  calc_id(ip,port,id);
+
+  //build the object we need
+  init_peer(peer, id, ip, port);
+  
+  //free extra memory
+  free(parse_str);
+
+  return;
+}
 
 int main (int argc, char * argv[]){
 
@@ -36,10 +100,18 @@ int main (int argc, char * argv[]){
     
   }
 
-  //read and parse the torrent file here
-  
+  //read and parse the torrent file here  
+  string name = "moby_dick.txt.torrent";
+  long size = getFileSize(name);
+  char data[size];
+  getPacketFile (name, data, 0,  size, true);
+  peer_t peerData;
+  __parse_peer(&peerData,data);
   if(bt_args.verbose){
+    printf("Data %s\n",data);
+    printf("Peer Data %s \n",peerData.id);
     // print out the torrent file arguments here
+    
   }
 
   //main client loop
