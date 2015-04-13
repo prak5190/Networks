@@ -16,7 +16,7 @@ long parseNum(char *data, int &n) {
 long parseSize(char* data,int &n) {
   char a[20];
   int i=0;
-  while(data[n] != ':') {    
+  while(data[n] != ':' &&  data[n] != '\0') {    
     a[i] = data[n];
     i++;
     n++;
@@ -38,17 +38,17 @@ void copyString(char*data,int &n ,char* str,int size) {
 struct BItem
 {
   void* val;
-  int type;
+  int type; // 0 - Str , 1 - Num , 2 - dict , 3 -list
 };
 
 
-std::unordered_map<std::string,BItem> parseDict(char* data, int &n) {
+void parseDict(std::unordered_map<std::string,BItem> &map,char* data, int &n,string prefix) {
   long size = 0;
   bool isKey = true;
-  bool isMeta = true;
-  char* strKey,*str;
+  char* strKey,*str;  
   int type = 0; // 0 - Str , 1 - Num , 2 - dict , 3 -list
-  std::unordered_map<std::string,BItem> map,dict;
+  if (log(5.1))
+    std::cout << "Torrent String "<<data << std::endl;
   while(data[n]!='\0') {    
     // Represents string 
     long num;
@@ -76,7 +76,7 @@ std::unordered_map<std::string,BItem> parseDict(char* data, int &n) {
       type = 1;
     } else if (data[n] == 'd') {        
       n++;
-      dict = parseDict(data,n);
+      parseDict(map,data,n, prefix + string(strKey) + ".");
       type = 2;n++;
     } else if (data[n] == 'l') {
       type = 3;n++;
@@ -90,6 +90,7 @@ std::unordered_map<std::string,BItem> parseDict(char* data, int &n) {
       // Print out stuff    
       if (log(3.5))
         std::cout << "Key : "<< strKey <<" - ";
+      string key = prefix +  string(strKey);
       BItem temp;
       temp.type = type;
       switch (type) {
@@ -97,29 +98,46 @@ std::unordered_map<std::string,BItem> parseDict(char* data, int &n) {
         if(log(3.5))
           std::cout << str << std::endl;
         temp.val = str;
+        map.insert(std::make_pair(key,temp));
         break;
       case 1: 
         if (log(3.5))
           std::cout << num << std::endl;
         temp.val = (void*)&num;
+        map.insert(std::make_pair(key,temp));
         break;
-      case 3:
-        temp.val = (void*)&dict;
+      case 2:
+        // temp.val = (void*)&dict;
+        // temp.dict = dict;
+        break;
       default :
         break;
       }
-      map.insert(std::make_pair(string(strKey),temp));
+      //delete strKey;  
     }
     
     if (isKey) {
       isKey = false;
     } else 
       isKey = true;    
-  }
-  return map;
+  }  
 }
 
-int main(int argc , char **argv) {
+// Use this map to print out all the required torrent info
+void logTorrentInfo(std::unordered_map<std::string,BItem> fmap) {
+  std::cout << "************   Torrent Info ****************" << std::endl;
+  std::cout << "Keys available \t: " ;
+  for (auto it = fmap.begin(); it != fmap.end(); ++it) {    
+    std::cout << it->first << ",";
+  }
+  std::cout << "" << std::endl;
+  std::cout << "Info Name \t: " << (char*)fmap.find("info.name")->second.val << std::endl;
+  std::cout << "Announce Url \t: " << (char*)fmap.find("announce")->second.val << std::endl;
+  std::cout << "Date \t: " << (long)fmap.find("creation date")->second.val << std::endl;
+  std::cout << "********************************************" << std::endl;
+}
+
+int main2(int argc , char **argv) {
   string name = "moby_dick.txt.torrent";
   // string name = "bencode.cpp";
   long size = getFileSize(name);
@@ -133,7 +151,7 @@ int main(int argc , char **argv) {
   int i = 0 ;
   if (data[i] == 'd') {
     i++;
-    fmap = parseDict(data,i); 
+    parseDict(fmap,data,i,""); 
   } else {
     std::cout << "Error in format" << std::endl;
   }

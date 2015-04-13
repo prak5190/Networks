@@ -84,10 +84,8 @@ int getPacketFile (string name,char *data, int start, long offset, bool isLast) 
   int retVal = 0;
   auto search = RFileDescriptorMap.find(name);
   FILE* fd = NULL;
-  bool isMapped = false;
   if (search != RFileDescriptorMap.end()) {
     fd = search->second;
-    isMapped = true;
   } else {
     // Open the file -- Create if not present
     fd = std::fopen(name.c_str(), "rb");
@@ -97,7 +95,8 @@ int getPacketFile (string name,char *data, int start, long offset, bool isLast) 
     fseek(fd , start,SEEK_SET);
   };
   if (!feof(fd)) {
-    std::cout << "SIze " << offset << std::endl;
+    if (log(3.1))
+      std::cout << "SIze " << offset << std::endl;
     fread(data,sizeof(char),offset, fd);
     // File writing done
     //std::cout << "File writing done " << std::endl;
@@ -109,7 +108,7 @@ int getPacketFile (string name,char *data, int start, long offset, bool isLast) 
     // EOF
     retVal = -1;
   }
-  if (isLast) {
+  if (isLast) {    
     fclose(fd);
     // Delete from map
     RFileDescriptorMap.erase(name);

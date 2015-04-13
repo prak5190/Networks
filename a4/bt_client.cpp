@@ -11,7 +11,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <signal.h>
-
+#include "bencode.cpp"
 #include "bt_lib.h"
 #include "bt_setup.h"
 
@@ -70,7 +70,7 @@ void __parse_torrent(bt_info_t* peer, char * peer_st){
   calc_id(ip,port,id);
 
   //build the object we need
-  init_peer(peer, id, ip, port);
+  //init_peer(peer, id, ip, port);
   
   //free extra memory
   free(parse_str);
@@ -101,23 +101,36 @@ int main (int argc, char * argv[]){
   }
 
   //read and parse the torrent file here  
-  string name = "moby_dick.txt.torrent";
-  long size = getFileSize(name);
-  char data[size];
-  getPacketFile (name, data, 0,  size, true);
-  peer_t peerData;
-  __parse_peer(&peerData,data);
-  if(bt_args.verbose){
-    printf("Data %s\n",data);
-    printf("Peer Data %s \n",peerData.id);
-    // print out the torrent file arguments here
-    
+  string name = string(bt_args.torrent_file);
+  long size = getFileSize(name);  
+  if (size >= 0) {
+    if (log(4))
+      std::cout << "File Size " << size  << std::endl;
+    char data[size+1];    
+    getPacketFile (name, data, 0,  size, true);
+    data[size] = '\0';
+    int k = 1;
+    std::unordered_map<string,BItem> fmap;
+    parseDict(fmap,data,k,"");
+    std::cout << fmap.size() << std::endl;
+    logTorrentInfo(fmap);
+  } else {
+    // Error case
+    std::cout << "File doesn't exit " << name << std::endl;
   }
-
+  //peer_t peerData;
+  //__parse_peer(&peerData,data);
+  /* if(bt_args.verbose){ */
+  /*   printf("Data %s\n",data); */
+  /*   printf("Peer Data %s \n",peerData.id); */
+  /*   // print out the torrent file arguments here */
+    
+  /* } */
+  
   //main client loop
   printf("Starting Main Loop\n");
   while(1){
-
+    break;
     //try to accept incoming connection from new peer
        
     
@@ -125,7 +138,6 @@ int main (int argc, char * argv[]){
     //   write pieces to files
     //   udpdate peers choke or unchoke status
     //   responses to have/havenots/interested etc.
-    
     //for peers that are not choked
     //   request pieaces from outcoming traffic
 

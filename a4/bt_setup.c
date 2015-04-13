@@ -32,7 +32,7 @@ void usage(FILE * file){
           "                \t (include multiple -p for more than 1 peer)\n"
           "  -I id         \t Set the node identifier to id (dflt: random)\n"
           "  -v            \t verbose, print additional verbose info\n");
-}
+} 
 
 /**
  * __parse_peer(peer_t * peer, char peer_st) -> void

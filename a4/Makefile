@@ -3,7 +3,7 @@ CPFLAGS=-g -Wall
 LDFLAGS= -lcrypto
 
 
-SRC= bt_client.c bt_lib.c bt_setup.c 
+SRC= bt_client.cpp bt_lib.c bt_setup.c 
 OBJ=$(SRC:.c=.o)
 BIN=bt_client
 
@@ -19,4 +19,4 @@ $(BIN): $(OBJ)
 $(SRC):
 
 clean:
-	rm -rf $(OBJ) $(BIN)
+	rm -rf $(BIN)
