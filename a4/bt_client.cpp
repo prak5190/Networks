@@ -1,7 +1,6 @@
 #include "common.cpp"  
-#include "bt_lib.h"
 #include "udphandler.cpp"
-#include "bt_setup.h"
+#include "bt_lib.cpp" 
  
 void parseCmdArgs(bt_args_t &bt_args, int argc,  char * argv[]) {
   parse_args(&bt_args, argc, argv);
@@ -56,6 +55,7 @@ bt_args_t bt_args;
 int main (int argc, char * argv[]){
   parseCmdArgs(bt_args,argc,argv);   
   parseTorrentFile(bt_args);
+  
   int s = get_and_bind_socket(&bt_args);
   pthread_t sth ,rth; 
   if (s != -1) {

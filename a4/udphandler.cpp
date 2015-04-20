@@ -11,6 +11,14 @@ void* createReciever (void* args) {
   __poll__(sockfd);
   return 0;
 }
+
+
+
+void sendHandshakeMsg(bt_args_t *bt_args, int s) {
+  handshake_msg_t msg;
+  
+}
+
 void* initHandshake (void* args) {
   thread_args *t = (thread_args*) args;
   int sfd = t->s; 
@@ -39,7 +47,7 @@ void* initHandshake (void* args) {
   if (connect(sockfd,(struct sockaddr *) &serv_addr ,sizeof(serv_addr)) < 0) {
     std::cout << "Error connecting "<< strerror(errno) << std::endl;
   }
-  int n = send(sockfd,message,strlen(message),0);
+  int n = send(sockfd,message,strlen(message),0);  
   if (n >= 0)
     std::cout << "Sent succesfully" << std::endl;
   

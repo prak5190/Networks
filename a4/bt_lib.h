@@ -6,16 +6,23 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-
-#include <poll.h>
-
+#include <openssl/sha.h> //hashing pieces
 //networking stuff
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h> 
+#include <netdb.h>
+#include <string.h>
+#include <iostream>
+#include <memory>
+#include <cstdio>
+#include <iomanip> 
+#include <cstdlib>
+#include <cstring>
 
 #include "bt_lib.h"
+
+using std::string; 
 
 
 /*Maximum file name size, to make things easy*/
@@ -53,6 +60,27 @@ typedef struct peer{
   int choked; //peer choked?
   int interested; //peer interested?
 }peer_t;
+
+typedef struct handshake_msg{
+  char init[20];
+  char res[8];
+  char hash[20];
+  char peerId[20];
+  
+  void setData(string info, string peerId) {   
+    SHA1((unsigned char *) info.c_str() , info.length(), (unsigned char *) this->hash);
+    strncpy(this->peerId , peerId.c_str() , sizeof(this->peerId));
+  };
+  
+  string toString() {
+    char *init = this->init;
+    init[0] = 19;
+    strcpy(init + 1, "BitTorrent protocol");    
+    bzero(res,sizeof(res));    
+    return string(init) + string(res) + string(hash) + string(peerId);
+  }
+}handshake_msg_t;
+
 
 
 //holds information about a torrent file
@@ -98,8 +126,8 @@ typedef struct{
   int begin; //offset within piece
   int length; //amount wanted, within a power of two
 } bt_request_t;
-
 typedef struct{
+
   int index; //which piece index
   int begin; //offset within piece
   char piece[0]; //pointer to start of the data for a piece

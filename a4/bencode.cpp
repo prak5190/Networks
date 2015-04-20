@@ -1,7 +1,6 @@
 #include "common.cpp"
 #ifndef __BENCODE__
 #define __BENCODE__ 1 
-
 long parseNum(char *data, int &n) {
   char a[20];
   int i=0;
@@ -48,13 +47,14 @@ struct BItem
 };
 
 
-void parseDict(std::unordered_map<std::string,BItem> &map,char* data, int &n,string prefix) {
+string parseDict(std::unordered_map<std::string,BItem> &map,char* data, int &n,string prefix) {
   long size = 0;
   bool isKey = true;
   char* strKey,*str;  
   int type = 0; // 0 - Str , 1 - Num , 2 - dict , 3 -list
   if (log_if(4.1))
     std::cout << "Torrent String "<<data << std::endl;
+  int start = n ;
   while(data[n]!='\0') {    
     // Represents string 
     long num;
@@ -82,7 +82,16 @@ void parseDict(std::unordered_map<std::string,BItem> &map,char* data, int &n,str
       type = 1;
     } else if (data[n] == 'd') {        
       n++;
-      parseDict(map,data,n, prefix + string(strKey) + ".");
+      string newPrefix = prefix + string(strKey) ;
+      string dictStr = parseDict(map,data,n, newPrefix + ".");      
+      if (newPrefix.length() != 0) {
+        BItem dictItem;
+        dictItem.size= dictStr.length();
+        dictItem.type = 0;
+        dictItem.val = (long*)(dictStr.c_str());
+        std::cout << "Inserting prefix " << prefix << std::endl;
+        map.insert(std::make_pair(newPrefix,dictItem));
+      }
       type = 2;n++;
     } else if (data[n] == 'l') {
       type = 3;n++;
@@ -125,7 +134,12 @@ void parseDict(std::unordered_map<std::string,BItem> &map,char* data, int &n,str
       isKey = false;
     } else 
       isKey = true;    
-  }  
+  }
+  char str1[n-start+1];
+  memcpy(str1, &data[start] , n-start);
+  str1[n-start] = '\0'; 
+  // std::cout << "############ " << str1 << std::endl;
+  return (string("d") + string(str1) + "e");
 }
 
 // Use this map to print out all the required torrent info

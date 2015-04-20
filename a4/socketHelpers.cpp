@@ -79,8 +79,7 @@ void __poll__(int sfd) {
   events = (epoll_event*)calloc (MAXEVENTS, sizeof(epoll_event));
   /* The event loop */
   while (1) {
-    int n, i;      
-    std::cout << "****************************" << std::endl;
+    int n, i;        
     n = epoll_wait (efd, events, MAXEVENTS, -1);
     for (i = 0; i < n; i++) {
       if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) || (!(events[i].events & EPOLLIN))) {
@@ -90,7 +89,6 @@ void __poll__(int sfd) {
         close (events[i].data.fd);
         continue;
       }  else if (sfd == events[i].data.fd) {
-        std::cout << "1111111111111111111111111111" << std::endl;
         /* We have a notification on the listening socket, which
            means one or more incoming connections. */
         while (1) {
@@ -177,8 +175,7 @@ void __poll__(int sfd) {
         }
       }
     }             
-  }  
-  std::cout << "Exiti;...........>" << std::endl;
+  }
 }
 
 
