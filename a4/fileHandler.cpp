@@ -108,7 +108,7 @@ int getPacketFile (string name,char *data, int start, long offset, bool isLast) 
     // EOF
     retVal = -1;
   }
-  if (isLast) {    
+  if (isLast) {      
     fclose(fd);
     // Delete from map
     RFileDescriptorMap.erase(name);

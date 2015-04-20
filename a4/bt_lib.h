@@ -67,7 +67,7 @@ typedef struct {
 
 //holds all the agurments and state for a running the bt client
 typedef struct {
-  int verbose; //verbose level
+  float verbose; //verbose level
   char save_file[FILE_NAME_MAX];//the filename to save to
   FILE * f_save;
   char log_file[FILE_NAME_MAX];//the log file
@@ -75,12 +75,11 @@ typedef struct {
   peer_t * peers[MAX_CONNECTIONS]; // array of peer_t pointers
   unsigned int id; //this bt_clients id
   int sockets[MAX_CONNECTIONS]; //Array of possible sockets
-  struct pollfd poll_sockets[MAX_CONNECTIONS]; //Array of pollfd for polling for input
-  
+  int num_peers;
+  //struct pollfd poll_sockets[MAX_CONNECTIONS]; //Array of pollfd for polling for input  
   /* set once torrent is parsed */
-  bt_info_t * bt_info; //the parsed info for this torrent
-  
-
+  bt_info_t * bt_info; //the parsed info for this torrent 
+  int port;
 } bt_args_t;
 
 

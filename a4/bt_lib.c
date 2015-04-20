@@ -42,7 +42,7 @@ void calc_id(char * ip, unsigned short port, char *id){
  * Return: 0 on success, negative values on failure. Will exit on bad
  * ip address.
  *   
- **/ 
+ **/  
 int init_peer(peer_t *peer, char * id, char * ip, unsigned short port){
     
   struct hostent * hostinfo;

@@ -1,22 +1,24 @@
 CC=g++ -std=c++11
 CPFLAGS=-g -Wall
-LDFLAGS= -lcrypto
+LDFLAGS= -lcrypto -lpthread
 
-
-SRC= bt_client.cpp bt_lib.c bt_setup.c 
+CPP_FILES := $(wildcard *.cpp)
+OBJ_FILES := $(addprefix ,$(notdir $(CPP_FILES:.cpp=.o)))
+SRC= bt_client.cpp bt_lib.c bt_setup.c
 OBJ=$(SRC:.c=.o)
 BIN=bt_client
 
 all: $(BIN)
 
-$(BIN): $(OBJ)
+$(BIN): $(OBJ_FILES) $(OBJ)	
 	$(CC) $(CPFLAGS) -o $(BIN) $(OBJ)  $(LDFLAGS)
 
-
+%.o: %.cpp
+	$(CC) -c $(CPFLAGS) -c -o $@ $<	
 %.o:%.c
-	$(CC) -c $(CPFLAGS) -o $@ $<  
+	$(CC) -c $(CPFLAGS) -o $@ $<
 
 $(SRC):
 
 clean:
-	rm -rf $(BIN)
+	rm -rf $(BIN) $(OBJ_FILES)

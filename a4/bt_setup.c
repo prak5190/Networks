@@ -106,7 +106,7 @@ void __parse_peer(peer_t * peer, char * peer_st){
  *
  * ERRORS: Will exit on various errors
  *
- **/
+ **/ 
 void parse_args(bt_args_t * bt_args, int argc,  char * argv[]){
   int ch; //ch for each flag
   int n_peers = 0;
@@ -135,14 +135,14 @@ void parse_args(bt_args_t * bt_args, int argc,  char * argv[]){
 
   bt_args->id = 0;
   
-  while ((ch = getopt(argc, argv, "hp:s:l:vI:")) != -1) {
+  while ((ch = getopt(argc, argv, "hp:s:l:v:I:")) != -1) {
     switch (ch) {
     case 'h': //help
       usage(stdout);
       exit(0);
       break;
     case 'v': //verbose
-      bt_args->verbose = 1;
+      bt_args->verbose =  atof(optarg);
       break;
     case 's': //save file
       strncpy(bt_args->save_file,optarg,FILE_NAME_MAX);

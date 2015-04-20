@@ -1,4 +1,7 @@
 #include "common.cpp"
+#ifndef __BENCODE__
+#define __BENCODE__ 1 
+
 long parseNum(char *data, int &n) {
   char a[20];
   int i=0;
@@ -9,8 +12,9 @@ long parseNum(char *data, int &n) {
   }
   a[i] = '\0';
   n++;
-  if (log(3))
+  if (log_if(3))
     std::cout << "Num String "<< a << std::endl;
+
   return atol(a);
 };
 long parseSize(char* data,int &n) {
@@ -37,8 +41,10 @@ void copyString(char*data,int &n ,char* str,int size) {
 
 struct BItem
 {
-  void* val;
+  long* val;
+  long numVal;
   int type; // 0 - Str , 1 - Num , 2 - dict , 3 -list
+  size_t size;
 };
 
 
@@ -47,22 +53,22 @@ void parseDict(std::unordered_map<std::string,BItem> &map,char* data, int &n,str
   bool isKey = true;
   char* strKey,*str;  
   int type = 0; // 0 - Str , 1 - Num , 2 - dict , 3 -list
-  if (log(5.1))
+  if (log_if(4.1))
     std::cout << "Torrent String "<<data << std::endl;
   while(data[n]!='\0') {    
     // Represents string 
     long num;
-    if(log (3.2))
+    if(log_if(3.2))
       std::cout << "MEta "<< data[n] << std::endl;
     if (data[n] >= 48 && data[n] < 58) {
       size = parseSize(data,n);
-      if (log(3))
+      if (log_if(3))
         std::cout << "Size is " << size << " : "<< n << std::endl;
       str = new char[size+1];
       bzero(str,size+1);
       str[size] = '\0';
       copyString(data,n,str,size);
-      if (log(3))
+      if (log_if(3))
         std::cout << "String : "<< str << std::endl;
       if (isKey) {
         strKey = str;
@@ -71,7 +77,7 @@ void parseDict(std::unordered_map<std::string,BItem> &map,char* data, int &n,str
     } else if (data[n] == 'i') {
       n++;
       num = parseNum(data,n);      
-      if (log(3))
+      if (log_if(3))
         std::cout << "Number " << num << std::endl;
       type = 1;
     } else if (data[n] == 'd') {        
@@ -88,22 +94,21 @@ void parseDict(std::unordered_map<std::string,BItem> &map,char* data, int &n,str
     
     if (!isKey) {
       // Print out stuff    
-      if (log(3.5))
+      if (log_if(3.5))
         std::cout << "Key : "<< strKey <<" - ";
       string key = prefix +  string(strKey);
       BItem temp;
+      temp.size = size;
       temp.type = type;
       switch (type) {
       case 0 : 
-        if(log(3.5))
+        if(log_if(3.5))
           std::cout << str << std::endl;
-        temp.val = str;
+        temp.val = (long*)str;
         map.insert(std::make_pair(key,temp));
         break;
       case 1: 
-        if (log(3.5))
-          std::cout << num << std::endl;
-        temp.val = (void*)&num;
+        temp.numVal = num;
         map.insert(std::make_pair(key,temp));
         break;
       case 2:
@@ -133,15 +138,28 @@ void logTorrentInfo(std::unordered_map<std::string,BItem> fmap) {
   std::cout << "" << std::endl;
   std::cout << "Info Name \t: " << (char*)fmap.find("info.name")->second.val << std::endl;
   std::cout << "Announce Url \t: " << (char*)fmap.find("announce")->second.val << std::endl;
-  std::cout << "Date \t: " << (long)fmap.find("creation date")->second.val << std::endl;
+  std::cout << "Length \t\t: " << fmap.find("info.length")->second.numVal << std::endl;
+  std::cout << "Piece Length \t: " << fmap.find("info.piece length")->second.numVal << std::endl;
+  std::cout << "Date \t\t: " << fmap.find("creation date")->second.numVal << std::endl;
   std::cout << "********************************************" << std::endl;
 }
 
-int main2(int argc , char **argv) {
+void populateInfo(std::unordered_map<std::string,BItem> fmap , bt_info_t* t) {
+  bzero(t->name , sizeof(t->name));
+  BItem temp = fmap.find("info.name")->second;
+  memcpy(t->name , temp.val,temp.size); //name of file
+  t->piece_length = fmap.find("info.piece length")->second.numVal; //number of bytes in each piece 
+  t->length = fmap.find("info.length")->second.numVal; //length of the file in bytes 
+  t->num_pieces = (int)(ceil(t->length / t-> piece_length)); //number of pieces, computed based on above two values 
+  /*********** - How to calculate sum of all hashes ?? Currently have only one piece hash in file ***/
+  // temp = fmap.find("info.pieces")->second;
+  // memcpy(t->piece_hashes,temp.val,temp.size); //pointer to 20 byte data buffers containing the sha1sum of each of the pieces
+} 
+int main3(int argc , char **argv) {
   string name = "moby_dick.txt.torrent";
   // string name = "bencode.cpp";
   long size = getFileSize(name);
-  if (log(3.2))
+  if (log_if(3.2))
     std::cout << "Torrent file Size " << size << std::endl;
   char data[size+1];
   getPacketFile (name, data, 0, size, true);
@@ -160,3 +178,4 @@ int main2(int argc , char **argv) {
   }
   return 0;
 }
+#endif
