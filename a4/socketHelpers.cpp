@@ -162,6 +162,12 @@ void __poll__(int sfd) {
           }
           /* Write the buffer to standard output */
           s = write (1, buf, count);
+          if (buf[0] == 19) {
+            // Handshake message - Lets parse it 
+            handshake_msg_t hmsg;
+            hmsg.parse(buf);
+            std::cout << "Peer Id " <<  hmsg.peerId << std::endl;
+          }
           if (s == -1) {
             perror ("write");
             abort ();

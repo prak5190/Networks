@@ -42,9 +42,9 @@ bool log_if(float level) {
 }
 using std::string;
 // #include "timeutil.cpp"
+#include "bt_lib.cpp"
 #include "socketHelpers.cpp"
 #include "fileHandler.cpp" 
-#include "bt_lib.cpp"
 #include "bencode.cpp"
 #endif
 

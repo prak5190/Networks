@@ -59,7 +59,7 @@ int main (int argc, char * argv[]){
   int s = get_and_bind_socket(&bt_args);
   pthread_t sth ,rth; 
   if (s != -1) {
-    rth = startRecieverThread(&bt_args,s);            
+    rth = startRecieverThread(&bt_args,s);
     if (bt_args.num_peers > 0) { 
       sth = startSenderThread(&bt_args,s); 
     }

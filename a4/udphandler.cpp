@@ -1,6 +1,7 @@
 #include "common.cpp"
 struct thread_args {
   // Sending port
+  bt_args_t *bt_args;
   int s;
 };
 
@@ -14,21 +15,24 @@ void* createReciever (void* args) {
 
 
 
-void sendHandshakeMsg(bt_args_t *bt_args, int s) {
-  handshake_msg_t msg;
-  
+int sendHandshakeMsg(bt_args_t *bt_args, int s) {
+  handshake_msg_t msg;  
+  // TODO fix ID
+  msg.setData(bt_args->bt_info->info_hash,string("dasda11111s"));   
+  string message = msg.toString();
+  int n = send(s,message.c_str(),message.length(),0);
+  return n;
 }
 
 void* initHandshake (void* args) {
   thread_args *t = (thread_args*) args;
   int sfd = t->s; 
-  const char* message = "Ok !!!  Awesome .. Did I just have a stroke?";
-  
+  bt_args_t *bt_args = t->bt_args;
+
+
   int sockfd;
   struct sockaddr_in serv_addr;
   struct hostent *server;
-  
-  char buffer[256];
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   make_socket_non_blocking(sockfd);
   if (sockfd < 0) {
@@ -42,12 +46,13 @@ void* initHandshake (void* args) {
   serv_addr.sin_family = AF_INET;
   bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
   serv_addr.sin_port = 9000;
-
+  
   /* Now connect to the server */
   if (connect(sockfd,(struct sockaddr *) &serv_addr ,sizeof(serv_addr)) < 0) {
     std::cout << "Error connecting "<< strerror(errno) << std::endl;
   }
-  int n = send(sockfd,message,strlen(message),0);  
+  
+  int n = sendHandshakeMsg(bt_args,sockfd);
   if (n >= 0)
     std::cout << "Sent succesfully" << std::endl;
   
@@ -71,6 +76,7 @@ pthread_t startRecieverThread(bt_args_t *bt_args,int s) {
   int recThread;
   thread_args *args = new thread_args();  
   args->s = s;
+  args->bt_args = bt_args;
   if ((recThread = pthread_create(&rthread , NULL ,createReciever, args)) == 0) {                   
     if (log_if(4.2))
       std::cout << "Started Reciever thread " << std::endl;    
@@ -85,9 +91,10 @@ pthread_t startRecieverThread(bt_args_t *bt_args,int s) {
 pthread_t startSenderThread(bt_args_t *bt_args,int s) {
   pthread_t sthread;
   int sendThread;
-  thread_args t;
-  t.s = s;
-  if ((sendThread = pthread_create(&sthread , NULL ,initHandshake, &t)) == 0) { 
+  thread_args *t = new thread_args();
+  t->s = s;
+  t->bt_args = bt_args;
+  if ((sendThread = pthread_create(&sthread , NULL ,initHandshake,t)) == 0) { 
     if (log_if(4.2))
       std::cout << "Init Handshake thread " << std::endl;    
   }
