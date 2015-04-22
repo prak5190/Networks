@@ -10,13 +10,13 @@ void* createReciever (void* args) {
   int sockfd = t->s;  
   std::cout << "Polling " << sockfd << std::endl;
   __poll__(sockfd);
+  std::cout << "Polling finished " << std::endl;
   return 0;
 }
 
 
-
 int sendHandshakeMsg(bt_args_t *bt_args, int s) {
-  handshake_msg_t msg;  
+  handshake_msg_t msg;
   // TODO fix ID
   msg.setData(bt_args->bt_info->info_hash,string("dasda11111s"));   
   string message = msg.toString();
@@ -41,33 +41,40 @@ void* initHandshake (void* args) {
   };
   
   server = gethostbyname("localhost");
-
-  bzero((char *) &serv_addr, sizeof(serv_addr));  
-  serv_addr.sin_family = AF_INET;
-  bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
-  serv_addr.sin_port = 9000;
-  
-  /* Now connect to the server */
-  if (connect(sockfd,(struct sockaddr *) &serv_addr ,sizeof(serv_addr)) < 0) {
-    std::cout << "Error connecting "<< strerror(errno) << std::endl;
+  int port = INIT_PORT;
+  while(1) {
+    if (port != bt_args->port) {
+      bzero((char *) &serv_addr, sizeof(serv_addr));  
+      serv_addr.sin_family = AF_INET;
+      bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+      serv_addr.sin_port = port;
+      /* Now connect to the server */
+      if (connect(sockfd,(struct sockaddr *) &serv_addr ,sizeof(serv_addr)) < 0) {
+        //std::cout << "Error connecting "<< strerror(errno) << std::endl;
+      } else {
+        std::cout << port;
+        int n = sendHandshakeMsg(bt_args,sockfd);
+        if (n >= 0)
+          std::cout << "Sent succesfully" << std::endl;          
+      }
+    }
+    port++;
+    if (port > MAX_PORT) 
+      port = INIT_PORT;
   }
-  
-  int n = sendHandshakeMsg(bt_args,sockfd);
-  if (n >= 0)
-    std::cout << "Sent succesfully" << std::endl;
-  
+    
   return 0;
 }
 
 int get_and_bind_socket(bt_args_t *bt_args) {
   int s = initSocket();
   // Bind listner socket
-  if (bindSocket(bt_args->port,s) != -1) {
-    printf("OK: bind SUCCESS\n");
-  } else {
-    printf("Error: bind FAILED\n");
-    return -1;
+  int port = INIT_PORT;
+  while (bindSocket(port,s) == -1) {
+    port++;
   }
+  bt_args->port = port;
+  std::cout << "Bound to port "<< port << std::endl;
   return s;
 }
 
@@ -77,7 +84,7 @@ pthread_t startRecieverThread(bt_args_t *bt_args,int s) {
   thread_args *args = new thread_args();  
   args->s = s;
   args->bt_args = bt_args;
-  if ((recThread = pthread_create(&rthread , NULL ,createReciever, args)) == 0) {                   
+  if ((recThread = pthread_create(&rthread , NULL ,createReciever, args)) == 0) {
     if (log_if(4.2))
       std::cout << "Started Reciever thread " << std::endl;    
   }

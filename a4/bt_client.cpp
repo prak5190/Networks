@@ -18,10 +18,7 @@ void parseCmdArgs(bt_args_t &bt_args, int argc,  char * argv[]) {
         print_peer(bt_args.peers[i]);
         num++;
       }      
-    }      
-    // Hard code for testing
-    if (num == 0) 
-      bt_args.port = 9000; 
+    }     
     bt_args.num_peers = num;
     if (log_if(4.1))
       std::cout << "Number of peers " << num << std::endl;
@@ -60,9 +57,9 @@ int main (int argc, char * argv[]){
   pthread_t sth ,rth; 
   if (s != -1) {
     rth = startRecieverThread(&bt_args,s);
-    if (bt_args.num_peers > 0) { 
-      sth = startSenderThread(&bt_args,s); 
-    }
+    //if (bt_args.num_peers > 0) { 
+    sth = startSenderThread(&bt_args,s); 
+      //}
   }
   // while(1){
   //   std::cout << "Working "<<i  << std::endl;

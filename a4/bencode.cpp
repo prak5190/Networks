@@ -13,9 +13,9 @@ long parseNum(char *data, int &n) {
   n++;
   if (log_if(3))
     std::cout << "Num String "<< a << std::endl;
-
   return atol(a);
 };
+
 long parseSize(char* data,int &n) {
   char a[20];
   int i=0;
@@ -165,11 +165,11 @@ void populateInfo(std::unordered_map<std::string,BItem> fmap , bt_info_t* t) {
   t->piece_length = fmap.find("info.piece length")->second.numVal; //number of bytes in each piece 
   t->length = fmap.find("info.length")->second.numVal; //length of the file in bytes 
   t->num_pieces = (int)(ceil(t->length / t-> piece_length)); //number of pieces, computed based on above two values   
-
+  
   temp = fmap.find("info")->second;
   // Info hash
   SHA1((unsigned char *) temp.val , temp.size, (unsigned char *) t->info_hash);
-
+  
   /*********** - How to calculate sum of all hashes ?? Currently have only one piece hash in file ***/
   // temp = fmap.find("info.pieces")->second;
   // memcpy(t->piece_hashes,temp.val,temp.size); //pointer to 20 byte data buffers containing the sha1sum of each of the pieces

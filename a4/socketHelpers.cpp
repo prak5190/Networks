@@ -3,22 +3,31 @@
 #define __SOCKETHELPER__ 1 
 #define MAXEVENTS 64
 // Socket helpers !!!!!!!!!!!!
+static int make_socket_non_blocking (int sfd)
+{
+  int flags, s;
+  flags = fcntl (sfd, F_GETFL, 0);
+  if (flags == -1)
+      return -1;
+  flags |= O_NONBLOCK;
+  s = fcntl (sfd, F_SETFL, flags);
+  if (s == -1)
+    return -1;
+  return 0;
+}
+
 int initSocket() {
   // Create socket 
   int s;			   /* s = socket */
   s = socket(AF_INET, SOCK_STREAM, 0);
   //  Enable reuse
   int true1 = 1;
-  if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *) &true1,
-                 sizeof(true1)) == -1) {
-    perror("reuseaddr");
-    return -1;
-  }
-  // if (setsockopt(s,IPPROTO_IP,IP_RECVTTL , (char *) &true1,
-  //                sizeof(true1)) == -1)
-  //   { perror("RecvTTL error");
-  //     return -1;
-  //   }
+  // if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *) &true1,
+  //                sizeof(true1)) == -1) {
+  //   perror("reuseaddr");
+  //   return -1;
+  // } 
+  make_socket_non_blocking (s);
   return s;
 };
 
@@ -41,22 +50,8 @@ sockaddr_in getSocketAddr(string ip , int port) {
   return serv_addr;
 }
 
-static int make_socket_non_blocking (int sfd)
-{
-  int flags, s;
-  flags = fcntl (sfd, F_GETFL, 0);
-  if (flags == -1)
-      return -1;
-  flags |= O_NONBLOCK;
-  s = fcntl (sfd, F_SETFL, flags);
-  if (s == -1)
-    return -1;
-  return 0;
-}
 
 void __poll__(int sfd) {
-  make_socket_non_blocking(sfd);  
-  std::cout << "Socket fd " << sfd << std::endl;
   int s = listen (sfd, SOMAXCONN); 
   int efd = epoll_create1 (0);
   if (efd == -1) {    

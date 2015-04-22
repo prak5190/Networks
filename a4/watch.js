@@ -36,7 +36,7 @@ function run() {
   if(make()) { 
     console.log("Triggering processes ");
     create_peer("s1");
-    create_peer("s2",9000);
+    create_peer("s2");
   }
 }
 
