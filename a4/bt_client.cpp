@@ -2,32 +2,34 @@
 #include "netHandler.cpp"
 #include "bt_lib.cpp" 
  
-void parseCmdArgs(bt_args_t &bt_args, int argc,  char * argv[]) {
-  parse_args(&bt_args, argc, argv);
-  if (bt_args.verbose != 0)     
-    LOG_LEVEL = bt_args.verbose;
+void parseCmdArgs(bt_args_t *bt_args, int argc,  char * argv[]) {
+  parse_args(bt_args, argc, argv);
+  if (bt_args->verbose != 0)     
+    LOG_LEVEL = bt_args->verbose;
   if(log_if(4.1)) {   
     printf("Args:\n");   
-    printf("verbose: %f\n",bt_args.verbose);
-    printf("save_file: %s\n",bt_args.save_file);
-    printf("log_file: %s\n",bt_args.log_file); 
-    printf("torrent_file: %s\n", bt_args.torrent_file);
-    int num = 0;
-    for(int i=0;i<MAX_CONNECTIONS;i++){
-      if(bt_args.peers[i] != NULL) {
-        print_peer(bt_args.peers[i]);
-        num++;
-      }      
-    }     
-    bt_args.num_peers = num;
-    if (log_if(4.1))
-      std::cout << "Number of peers " << num << std::endl;
+    printf("verbose: %f\n",bt_args->verbose);
+    printf("save_file: %s\n",bt_args->save_file);
+    printf("log_file: %s\n",bt_args->log_file); 
+    printf("torrent_file: %s\n", bt_args->torrent_file);
   }
+  int num = 0;
+  for(int i=0;i<MAX_CONNECTIONS;i++){
+    if(bt_args->peers[i] != NULL) {
+      if(log_if(4.1))
+        print_peer(bt_args->peers[i]);
+      num++;
+    }      
+  }    
+  bt_args->num_peers = num;
+  if (log_if(4.1))
+    std::cout << "Number of peers " << num << std::endl;
+  
 };
 
-void parseTorrentFile(bt_args_t &bt_args) {
+void parseTorrentFile(bt_args_t *bt_args) {
   //read and parse the torrent file here  
-  string name = string(bt_args.torrent_file);
+  string name = string(bt_args->torrent_file);
   long size = getFileSize(name);  
   if (size >= 0) {
     if (log_if(4))
@@ -39,27 +41,27 @@ void parseTorrentFile(bt_args_t &bt_args) {
     std::unordered_map<string,BItem> fmap;
     parseDict(fmap,data,k,"");
     logTorrentInfo(fmap);
-    bt_info_t infoDet;
-    populateInfo(fmap , &infoDet); 
-    bt_args.bt_info = &infoDet;    
+    bt_info_t *infoDet = new bt_info_t();
+    populateInfo(fmap , infoDet); 
+    bt_args->bt_info = infoDet;    
   } else {
     // Error case
     std::cout << "File doesn't exit " << name << std::endl;
   }
 }
   
-bt_args_t bt_args;
+bt_args_t *bt_args = new bt_args_t();
 int main (int argc, char * argv[]){  
   parseCmdArgs(bt_args,argc,argv);   
   parseTorrentFile(bt_args);
-  
-  int s = get_and_bind_socket(&bt_args);
+  strcpy(bt_args->save_file,"moby_dick.txt");
+  int s = get_and_bind_socket(bt_args);
   pthread_t sth ,rth; 
   if (s != -1) {
-    rth = startRecieverThread(&bt_args,s);
-    //if (bt_args.num_peers > 0) { 
-    sth = startSenderThread(&bt_args,s); 
-      //}
+    rth = startRecieverThread(bt_args,s);
+    // if (bt_args.num_peers > 0) { 
+    sth = startSenderThread(bt_args,s); 
+    // }
   }
   // while(1){
   //   std::cout << "Working "<<i  << std::endl;
@@ -80,7 +82,7 @@ int main (int argc, char * argv[]){
   //   //update peers, 
  
   // }
-   
+  
   if (rth != 0) {
     std::cout << "joining reci thread " << std::endl;
     pthread_join(rth,NULL);  

@@ -152,6 +152,7 @@ void logTorrentInfo(std::unordered_map<std::string,BItem> fmap) {
   std::cout << "" << std::endl;
   std::cout << "Info Name \t: " << (char*)fmap.find("info.name")->second.val << std::endl;
   std::cout << "Announce Url \t: " << (char*)fmap.find("announce")->second.val << std::endl;
+  std::cout << "Piece_hash Len \t: " << fmap.find("info.pieces")->second.size << std::endl;
   std::cout << "Length \t\t: " << fmap.find("info.length")->second.numVal << std::endl;
   std::cout << "Piece Length \t: " << fmap.find("info.piece length")->second.numVal << std::endl;
   std::cout << "Date \t\t: " << fmap.find("creation date")->second.numVal << std::endl;
@@ -169,16 +170,17 @@ void populateInfo(std::unordered_map<std::string,BItem> fmap , bt_info_t* t) {
   temp = fmap.find("info")->second;
   // Info hash
   SHA1((unsigned char *) temp.val , temp.size, (unsigned char *) t->info_hash);    
-  temp = fmap.find("info.pieces")->second;
+  temp = fmap.find("info.pieces")->second;  
   // Length is multiple of 20
   int num = temp.size / 20;
+
   char **arr = new char*[num];
-  for (int i = 0;i<num ; i++) {
+  for (int i = 0;i< num ; i++) {
     arr[i] = new char[20];
     memcpy(arr[i] , temp.val + (i*20) , 20);
   }
-  t->piece_hashes = arr;  
-  // memcpy(t->piece_hashes,temp.val,temp.size); //pointer to 20 byte data buffers containing the sha1sum of each of the pieces
+  t->num_pieces = num; 
+  t->piece_hashes = arr;
 } 
 int main3(int argc , char **argv) {
   string name = "moby_dick.txt.torrent";

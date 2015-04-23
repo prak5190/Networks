@@ -23,6 +23,7 @@ int handleData(char* buf , int type,int s) {
     // Do something with the data    
   }break;
   }
+  return 0;
 }
 
 void* createReciever (void* args) {
@@ -43,6 +44,35 @@ int sendHandshakeMsg(bt_args_t *bt_args, int s) {
   return n;
 }
 
+string createBitfieldMessage(bt_args_t *bt_args) {
+  bt_msg_t msg;  
+  msg.bt_type = 5;    
+  int num_pieces = bt_args->bt_info->num_pieces;
+  long length = bt_args->bt_info->length;
+  char** pieces = bt_args->bt_info->piece_hashes;
+  int piece_length = bt_args->bt_info->piece_length;
+  char data[piece_length];
+  char* fname = bt_args->save_file;
+  string name = string(fname);
+  long fileSize = getFileSize(name);
+  
+  char bitfield[(int)ceil(num_pieces/8)];
+
+  for (int i  = 0; i < num_pieces ; i++) {
+    bzero(data,sizeof(data));
+    long off  = piece_length < fileSize ? piece_length : fileSize;
+    getPacketFile (name,data, i * piece_length,off , false);
+    fileSize -= off;
+    char id[20];
+    calc_sha(data,off,id);  
+    if (strncmp(id,pieces[i],20) == 0) {
+      std::cout << "File Hash matched" << std::endl;      
+    }
+  }
+  std::cout << "Exiting " << std::endl;
+  return "";
+}
+
 int sendMessage(bt_args_t *bt_args) {
   bt_msg_t msg;  
   msg.bt_type = 111;
@@ -50,7 +80,8 @@ int sendMessage(bt_args_t *bt_args) {
   memcpy(message,(const char*) &msg,sizeof(msg));
   // Even ports are seeders , odd are leechers 
   bool isSeeder = bt_args->port % 2 == 0 ? true : false;
-   
+  
+  string m = createBitfieldMessage(bt_args);
   // Send data to all 
   for (auto it = url_to_socket_map.begin(); it != url_to_socket_map.end(); ++it) {
     int s = it->second;
