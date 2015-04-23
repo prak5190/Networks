@@ -50,8 +50,19 @@ sockaddr_in getSocketAddr(string ip , int port) {
   return serv_addr;
 }
 
+int get_and_bind_socket(bt_args_t *bt_args) {
+  int s = initSocket();
+  // Bind listner socket
+  int port = INIT_PORT;
+  while (bindSocket(port,s) == -1) {
+    port++;
+  }
+  bt_args->port = port;
+  std::cout << "Bound to port "<< port << std::endl;
+  return s;
+}
 
-void __poll__(int sfd) {
+void __poll__(int sfd,int (*cb)(char*,int,int)) {
   int s = listen (sfd, SOMAXCONN); 
   int efd = epoll_create1 (0);
   if (efd == -1) {    
@@ -136,6 +147,7 @@ void __poll__(int sfd) {
            and won't get a notification again for the same
            data. */
         int done = 0;          
+        bool isData = false;
         while (1) {
           ssize_t count;
           char buf[512];
@@ -157,12 +169,17 @@ void __poll__(int sfd) {
           }
           /* Write the buffer to standard output */
           s = write (1, buf, count);
+          int type = -1;
           if (buf[0] == 19) {
-            // Handshake message - Lets parse it 
-            handshake_msg_t hmsg;
-            hmsg.parse(buf);
-            std::cout << "Peer Id " <<  hmsg.peerId << std::endl;
+            type = 0;
+          } else {
+            if (isData) {
+              type = 2;
+            } else {
+              type = 1;
+            }            
           }
+          cb(buf,type,events[i].data.fd);
           if (s == -1) {
             perror ("write");
             abort ();

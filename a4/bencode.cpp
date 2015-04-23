@@ -168,10 +168,16 @@ void populateInfo(std::unordered_map<std::string,BItem> fmap , bt_info_t* t) {
   
   temp = fmap.find("info")->second;
   // Info hash
-  SHA1((unsigned char *) temp.val , temp.size, (unsigned char *) t->info_hash);
-  
-  /*********** - How to calculate sum of all hashes ?? Currently have only one piece hash in file ***/
-  // temp = fmap.find("info.pieces")->second;
+  SHA1((unsigned char *) temp.val , temp.size, (unsigned char *) t->info_hash);    
+  temp = fmap.find("info.pieces")->second;
+  // Length is multiple of 20
+  int num = temp.size / 20;
+  char **arr = new char*[num];
+  for (int i = 0;i<num ; i++) {
+    arr[i] = new char[20];
+    memcpy(arr[i] , temp.val + (i*20) , 20);
+  }
+  t->piece_hashes = arr;  
   // memcpy(t->piece_hashes,temp.val,temp.size); //pointer to 20 byte data buffers containing the sha1sum of each of the pieces
 } 
 int main3(int argc , char **argv) {

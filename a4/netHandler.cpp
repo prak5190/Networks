@@ -6,11 +6,30 @@ struct thread_args {
   int s;
 };
 
+int handleData(char* buf , int type,int s) {
+  switch(type) {
+  case 0 : {
+    // Handshake message - Lets parse it 
+    handshake_msg_t hmsg;
+    hmsg.parse(buf);
+    std::cout << "Peer Id " <<  hmsg.peerId << std::endl;
+  }break;
+  case 1: {
+    bt_msg_t msg;
+    memcpy((char*)&msg , buf , sizeof(msg));
+    std::cout << "\nData Receieved " << msg.bt_type << std::endl;
+  }break;
+  case 2: {
+    // Do something with the data    
+  }break;
+  }
+}
+
 void* createReciever (void* args) {
   thread_args *t = (thread_args*) args;
   int sockfd = t->s;  
   std::cout << "Polling " << sockfd << std::endl;
-  __poll__(sockfd);
+  __poll__(sockfd,handleData);
   std::cout << "Polling finished " << std::endl;
   return 0;
 }
@@ -31,7 +50,7 @@ int sendMessage(bt_args_t *bt_args) {
   memcpy(message,(const char*) &msg,sizeof(msg));
   // Even ports are seeders , odd are leechers 
   bool isSeeder = bt_args->port % 2 == 0 ? true : false;
-    
+   
   // Send data to all 
   for (auto it = url_to_socket_map.begin(); it != url_to_socket_map.end(); ++it) {
     int s = it->second;
@@ -97,20 +116,6 @@ void* initHandshake (void* args) {
     }
   }    
   return 0;
-}
-
-
-
-int get_and_bind_socket(bt_args_t *bt_args) {
-  int s = initSocket();
-  // Bind listner socket
-  int port = INIT_PORT;
-  while (bindSocket(port,s) == -1) {
-    port++;
-  }
-  bt_args->port = port;
-  std::cout << "Bound to port "<< port << std::endl;
-  return s;
 }
 
 pthread_t startRecieverThread(bt_args_t *bt_args,int s) {  
