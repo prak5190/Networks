@@ -1,7 +1,4 @@
 #include "common.cpp"
-std::unordered_map<string,int> url_to_socket_map;
-std::unordered_map<int,int> completed_piece_to_socket_map;
-std::unordered_map<int,int> piece_to_socket_map;
 struct thread_args {
   // Sending port
   bt_args_t *bt_args;
@@ -47,15 +44,6 @@ int getRandomPieceToDownload() {
   return rej;
 }
 
-bt_msg_t parseBitField(char* message,int length) {
-  bt_msg_t msg1;
-  memcpy((char*)&msg1 , message , sizeof(bt_msg_t));  
-  char* msg = new char[length - sizeof(bt_msg_t)];
-  memcpy(msg,&message[sizeof(bt_msg_t)], length - sizeof(bt_msg_t));
-  msg1.payload.bitfiled.bitfield = msg;
-  return msg1;
-}
-
 int handleData(char* buf , int cbType,int s) {
   switch(cbType) {
   case 0 : {
@@ -70,12 +58,20 @@ int handleData(char* buf , int cbType,int s) {
     std::cout << "\nData Receieved " << msg.bt_type << std::endl;
     // Now use the type to parse message 
     switch(msg.bt_type) {
-    case 5: {
-      bt_msg_t m1 = parseBitField(buf, msg.length);
+    case BT_BITFILED: {
+      bt_msg_t *m1 = parseBitField(buf, msg.length);
       if (log_if(4.3))
-        std::cout << "Bitfield message "<< m1.payload.bitfiled.bitfield << std::endl;
+        std::cout << "Bitfield message "<< m1->payload.bitfiled.bitfield << std::endl;
       // Use the bitfield to assign a role to the Socket 
       
+    }break;
+    case BT_REQUEST: {
+      // msg already has reqyuired data - no need to reparse      
+    }break;
+    case BT_PIECE: {
+      bt_msg_t *m1 = parsePieceMessage(buf, msg.length);
+      if (log_if(4.4))
+        std::cout << "Piece message "<< m1->payload.piece.piece << std::endl;
     }break;
     }
   }break;
@@ -103,52 +99,6 @@ int sendHandshakeMsg(bt_args_t *bt_args, int s) {
   int n = send(s,message.c_str(),message.length(),0);
   return n;
 }
-
-char* createBitfieldMessage(bt_args_t *bt_args,int &length1) {
-  bt_msg_t msg;  
-  msg.bt_type = 5;    
-  int num_pieces = bt_args->bt_info->num_pieces;
-  long length = bt_args->bt_info->length;
-  char** pieces = bt_args->bt_info->piece_hashes;
-  int piece_length = bt_args->bt_info->piece_length;
-  char data[piece_length];
-  char* fname = bt_args->save_file;
-  string name = string(fname);
-  long fileSize = getFileSize(name);
-  char bitfield[(int)ceil((double)num_pieces/8)];
-  for (int i  = 0; i < num_pieces ; i++) {
-    int k = (int) i/8;
-    bzero(data,sizeof(data));
-    long off  = piece_length < fileSize ? piece_length : fileSize;
-    getPacketFile (name,data, i * piece_length,off , false);
-    fileSize -= off;
-    char id[20];
-    calc_sha(data,off,id);  
-    if (strncmp(id,pieces[i],20) == 0) {
-      if (i%8 == 0) {
-        bitfield[k] = (unsigned char) 0;        
-      }
-      // -2 Indicates piece exists
-      completed_piece_to_socket_map.insert(std::make_pair(i,-2));
-      bitfield[k] = (unsigned char)((1 << 7-(i%8))  + bitfield[k]);      
-    } else {
-      // -1 indicates piece doesn't exist - Now populate this with sockets attempting to download it
-      piece_to_socket_map.insert(std::make_pair(i,-1));
-    }
-  }
-
-  closeFile(name);
-  // The serialization of the message -
-  msg.payload.bitfiled.size = sizeof (bitfield);
-  msg.length = sizeof(msg) + sizeof(bitfield);  
-  char *message= new char[msg.length];
-  memcpy(message + sizeof(msg),bitfield,sizeof(bitfield));
-  msg.payload.bitfiled.bitfield = &message[sizeof(msg)];
-  memcpy(message,(char*) &msg,sizeof(msg));  
-  length1 = msg.length;   
-  return message;
-}
-
 
 int sendMessage(bt_args_t *bt_args) {
   bt_msg_t msg;  

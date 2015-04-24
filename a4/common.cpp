@@ -46,5 +46,6 @@ using std::string;
 #include "socketHelpers.cpp"
 #include "fileHandler.cpp" 
 #include "bencode.cpp"
+#include "msgHandler.cpp"
 #endif
 

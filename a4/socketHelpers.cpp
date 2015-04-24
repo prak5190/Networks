@@ -21,7 +21,7 @@ int initSocket() {
   int s;			   /* s = socket */
   s = socket(AF_INET, SOCK_STREAM, 0);
   //  Enable reuse
-  int true1 = 1;
+  //int true1 = 1;
   // if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *) &true1,
   //                sizeof(true1)) == -1) {
   //   perror("reuseaddr");

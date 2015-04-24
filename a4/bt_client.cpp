@@ -56,11 +56,8 @@ int main (int argc, char * argv[]){
   parseCmdArgs(bt_args,argc,argv);   
   parseTorrentFile(bt_args);
   int length;
-  // Populate bit field 
+  // Populate bit field and maps
   createBitfieldMessage(bt_args,length);
-  int rn = getRandomPieceToDownload();
-  std::cout << "Random ind selected " << rn << std::endl;
-  sleep(5); 
   int s = get_and_bind_socket(bt_args);
   pthread_t sth ,rth; 
   if (s != -1) {
