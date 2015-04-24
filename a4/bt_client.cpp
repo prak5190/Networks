@@ -6,6 +6,7 @@ void parseCmdArgs(bt_args_t *bt_args, int argc,  char * argv[]) {
   parse_args(bt_args, argc, argv);
   if (bt_args->verbose != 0)     
     LOG_LEVEL = bt_args->verbose;
+  printf("save_file: %s\n",bt_args->save_file);
   if(log_if(4.1)) {   
     printf("Args:\n");   
     printf("verbose: %f\n",bt_args->verbose);
@@ -54,7 +55,12 @@ bt_args_t *bt_args = new bt_args_t();
 int main (int argc, char * argv[]){  
   parseCmdArgs(bt_args,argc,argv);   
   parseTorrentFile(bt_args);
-  strcpy(bt_args->save_file,"moby_dick.txt");
+  int length;
+  // Populate bit field 
+  createBitfieldMessage(bt_args,length);
+  int rn = getRandomPieceToDownload();
+  std::cout << "Random ind selected " << rn << std::endl;
+  sleep(5); 
   int s = get_and_bind_socket(bt_args);
   pthread_t sth ,rth; 
   if (s != -1) {

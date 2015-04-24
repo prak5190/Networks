@@ -168,7 +168,7 @@ void __poll__(int sfd,int (*cb)(char*,int,int)) {
             break;
           }
           /* Write the buffer to standard output */
-          s = write (1, buf, count);
+          //s = write (1, buf, count);
           int type = -1;
           if (buf[0] == 19) {
             type = 0;
@@ -177,6 +177,7 @@ void __poll__(int sfd,int (*cb)(char*,int,int)) {
               type = 2;
             } else {
               type = 1;
+              isData = true;
             }            
           }
           cb(buf,type,events[i].data.fd);

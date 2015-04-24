@@ -88,14 +88,14 @@ int getPacketFile (string name,char *data, int start, long offset, bool isLast) 
     fd = search->second;
   } else {
     // Open the file -- Create if not present
-    fd = std::fopen(name.c_str(), "rb");
+    fd = std::fopen(name.c_str(), "wb+");
     RFileDescriptorMap.insert(std::make_pair(name , fd));
   }
   if (start != -1 || ftell(fd) != start) {
     fseek(fd , start,SEEK_SET);
   };
   if (!feof(fd)) {
-    if (log(3.1))
+    if (log_if(3.1))
       std::cout << "SIze " << offset << std::endl;
     fread(data,sizeof(char),offset, fd);
     // File writing done

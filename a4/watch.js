@@ -12,11 +12,14 @@ function make() {
   }
 }
 
-function create_peer(name , port) {
+function create_peer(name , save_file,port) {
   var peerStr = "";
+  var saveStr = "";
   if (port) 
-    peerStr = "-p localhost:"+port;
-  var command = "./bt_client -v 4 "+ peerStr + " moby_dick.txt.torrent > ~/" + name + ".log";
+    peerStr = " -p localhost:"+port + " " ;
+  if (save_file)
+    saveStr = " -s "+save_file + " ";
+  var command = "./bt_client -v 4"+ peerStr + saveStr + "moby_dick.txt.torrent > ~/" + name + ".log";
   console.log("COmmand " ,command);
   return child_process.exec(command, function (error, stdout, stderr) {
     //console.log('stdout: ' + stdout);
@@ -36,8 +39,8 @@ function run() {
   kill_all();
   if(make()) { 
     console.log("Triggering processes ");
-    create_peer("s1");
-    create_peer("s2");
+    create_peer("s1","s1-moby.txt");
+    create_peer("s2","s2-moby.txt");
   }
 }
 
