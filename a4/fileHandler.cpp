@@ -95,12 +95,11 @@ int getPacketFile (string name,char *data, int start, long offset, bool isLast) 
     fseek(fd , start,SEEK_SET);
   };
   if (!feof(fd)) {
-    if (log_if(3.1))
-      std::cout << "SIze " << offset << std::endl;
-    fread(data,sizeof(char),offset, fd);
-    // File writing done
-    //std::cout << "File writing done " << std::endl;
-  } 
+    //if (log_if(3.1))
+    std::cout << "SIze " << offset << std::endl;
+    retVal = fread(data,sizeof(char),offset, fd);
+    std::cout << "Ret Val " << retVal << std::endl;    
+  }  
   // If feof now 
   if (feof(fd)) {
     // std::cout << "EOF" << data << std::endl;

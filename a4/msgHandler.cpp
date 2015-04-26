@@ -6,7 +6,6 @@ bt_msg_t* parseBitField(const char* message,int length) {
   unsigned char* msg = new unsigned char[length];
   memcpy(msg,&message[sizeof(bt_msg_t)], length);
   msg1->payload.bitfiled.bitfield = msg;
-  std::cout << "R: Got THis BItfield Message " <<(msg[0] & (1 << 7)) << std::endl; 
   return msg1;
 }
 
@@ -104,12 +103,12 @@ char* createBitfieldMessage(bt_args_t *bt_args,int &length1) {
       bitfield[k] = (unsigned char) ((1 << 7-(i%8))  + bitfield[k]);      
     } else {
       bitfield[k] = (unsigned char) ((1 << 7-(i%8))  + bitfield[k]);  
-      // -1 indicates piece doesn't exist - Now populate this with sockets attempting to download it
+      // -1 indicates piece doesn't exist - Now populate this with sockets attempting to download it      
       if (piece_to_socket_map.find(i) == piece_to_socket_map.end()) {
         piece_to_socket_map.insert(std::make_pair(i,-1));
       }
     }
-  }  
+  }   
   closeFile(name);
   // The serialization of the message -
   msg.payload.bitfiled.size = sizeof (bitfield);

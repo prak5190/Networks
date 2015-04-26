@@ -145,7 +145,7 @@ int get_and_bind_socket(bt_args_t *bt_args) {
 
 int efd = epoll_create1(0);
 int receiver_efd = efd;
-void  __npoll__(int sfd,int (*cb)(bt_args_t*, vector<char>,int) , bt_args_t *bt_args) {
+void  __npoll__(int sfd,int (*cb)(bt_args_t*, vector<char>,int),int (*cb2)(bt_args_t*,int) , bt_args_t *bt_args) {
   if (efd == -1) {
     std::cout << "RE: Fatal Epoll create error " << std::endl;
     abort();
@@ -217,12 +217,17 @@ void  __npoll__(int sfd,int (*cb)(bt_args_t*, vector<char>,int) , bt_args_t *bt_
               }
             }                        
             std::cout << "R: Recieved Data " << finalStr.size();
-            for (auto it = finalStr.begin(); it != finalStr.end(); ++it) {
-              std::cout<<*it;
-            }
+            // for (auto it = finalStr.begin(); it != finalStr.end(); ++it) {
+            //   std::cout<<*it;
+            // }
             std::cout<< std::endl;
             cb(bt_args,finalStr,events[i].data.fd);
           }
+     }
+     // Send request for pieces which ever are required
+     for (auto it = socket_to_piecelist_map.begin(); it != socket_to_piecelist_map.end(); ++it) {
+       int s = it->first;
+       cb2(bt_args,s);
      }
   }
 }

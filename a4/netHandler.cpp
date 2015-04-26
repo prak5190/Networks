@@ -49,14 +49,14 @@ void setPieceAvailability(bt_args_t *bt_args,bt_msg_t *msg,int s) {
   unsigned char *bits = msg->payload.bitfiled.bitfield;
   int totalPieces = bt_args->bt_info->num_pieces;
   int p = 0;
-  for (int i = 0; i < size ; i++) {
+  for (int i = 0; i < size ; i++) { 
     unsigned char a = bits[i];
     // Check every bit
     for (int j = 0; j < 8 ; j++) {
       if (p < totalPieces) {
         if (((a >> (7 - j)) & 1) == 1) {
-          std::cout << "R: Registering piece " << p << std::endl;
-          registerPiece(s,p);
+          //std::cout << "R: Registering piece " << p << std::endl;
+          registerPiece(s,p);           
         }
       } else {
         break;
@@ -67,36 +67,69 @@ void setPieceAvailability(bt_args_t *bt_args,bt_msg_t *msg,int s) {
       break;
   }
 }
-void sendRequestForPieces(bt_args_t *bt_args,int s) {
+int sendData(bt_args_t *bt_args, int s, int length, int index, int begin) {
+  // Calculate start of file 
+  long pl = bt_args->bt_info->piece_length;
+  long start = index * pl + begin; 
+  string sf = string(bt_args->save_file);
+  char data[length];
+  if (index == bt_args->bt_info->num_pieces) {
+    // DO something to demarcate end of file
+  }
+  getPacketFile(sf,data, start,length, false);
+  char message[sizeof(bt_msg_t) + length];
+  bt_msg_t t; 
+  t.bt_type = 7;
+  t.length = length;
+  t.payload.piece.index = index;
+  t.payload.piece.begin = begin; 
+  memcpy(message,(char*)&t,sizeof(t));
+  memcpy(&message[sizeof(t)],data,length);
+  int n = send(s,message,sizeof(message),0);
+  if (n >= 0) {
+    std::cout << "S: Data Sent of length " << length  << std::endl;
+  } else {
+    std::cout << "SE: Error sending piece " << std::endl;
+    return -1;
+  }
+  return 0;
+}
+int sendRequestForPieces(bt_args_t *bt_args,int s) {
   auto it1 = socket_to_piecelist_map.find(s);
   int requ = 0;
   if (piece_to_socket_map.size() == 0) {
     std::cout << "S: Am a seeder - No need to send a request " << std::endl;
-    return;
-  }
+    return 1;
+  } 
   std::cout << "S: Pieces available in socket " << s << " : " << it1->second.size() << std::endl;
+  for (auto it = piece_to_socket_map.begin(); it != piece_to_socket_map.end(); ++it) {
+    std::cout << "Required piece " << it->first << std::endl;;
+  }
   for (auto it = it1->second.begin(); it != it1->second.end(); ++it) {
     int length = 0;
     int piece = *it;
     std::cout << "S: Piece Available is " << piece << std::endl;
     // If piece is not in file - it will exist in map
-    if (piece_to_socket_map.find(piece) != piece_to_socket_map.end()){
-      requ++;
-      // Start request 
-      char *msg = createRequestMessage(bt_args,length,piece,(1 << 15) , 0);
-      bt_msg_t kk; 
-      memcpy((char*)&kk , msg , sizeof(kk));
-      int n = send(s,msg,length,0);
-      piece_to_socket_map.insert(std::make_pair(piece,s));
-      if (n > 0){
-        std::cout << "S: Sending request *********************"<< s << "    " << kk.bt_type << std::endl;        
-      } else {
-        std::cout << "SE: Failed " << strerror(errno) << std::endl;
+    auto it2 = piece_to_socket_map.find(piece);
+    if (it2 != piece_to_socket_map.end()){      
+      // If positive - then it is already being downloaded by the socket 
+      if (it2->second < 0){
+        requ++;
+        // Start request 
+        char *msg = createRequestMessage(bt_args,length,piece,(1 << 15) , 0);
+        int n = send(s,msg,length,0);
+        piece_to_socket_map.insert(std::make_pair(piece,s));
+        if (n > 0){
+          std::cout << "S: Sending request *********************"<< s << "    " << std::endl;       
+        } else {
+          std::cout << "SE: Failed " << strerror(errno) << std::endl;
+        }
       }
     }
   }
   if (requ == 0) 
     std::cout << "S: No Useful data found from socket "<< s << std::endl;
+  return 0;
 }
 
 int sendHandshakeMsg(bt_args_t *bt_args, int s) {
@@ -190,6 +223,35 @@ void createSockAddr(int port,sockaddr_in *serv_addr) {
   serv_addr->sin_port = htons(port);
   serv_addr->sin_addr.s_addr = htonl(2130706433);
   //bcopy((char *)server->h_addr, (char *)serv_addr->sin_addr.s_addr, server->h_length);
+};
+void writeToFile(bt_args_t *bt_args, bt_msg_t *msg,int s) {
+  string fs = string(bt_args->save_file);
+  int pl = bt_args->bt_info->piece_length;
+  // If last then it should be remaining file size
+  int totalPieceLength = pl;
+  int length = msg->length;
+  int index = msg->payload.piece.index;  
+  char* piece = msg->payload.piece.piece;
+  int begin = msg->payload.piece.begin;
+  // Calcalate start 
+  long start = (index * pl) + begin;
+  assembleFile (fs,start, piece , length , false);  
+  if (begin + length >= totalPieceLength) {
+    // Verify the integrity of piece 
+    // If SHA matches 
+    if (1) {
+      piece_to_socket_map.erase(index);
+      // Send a have 
+      
+    } else {
+      //or else send a request for the starting piece       
+    }
+  } else {
+    // Request next part of this piece     
+    int len;
+    char *msg = createRequestMessage(bt_args,len,index,(1 << 15) , begin + length);
+    int n = send(s,msg,len,0);
+  }
 }
 
 std::vector<char> oldData;
@@ -270,7 +332,7 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
       memset((char*)&msg,0x00,sizeof(msg));
       memcpy((char*)&msg , buf , sizeof(bt_msg_t));
       if (log_if(4.2)) {
-        std::cout << "\nR: Data - Type : " << msg.bt_type << " - Buffer " << buf << std::endl; 
+        std::cout << "\nR: Data - Type : " << msg.bt_type << " Size : " << msg.length << std::endl; 
       }    
       // Now use the type to parse message 
       switch(msg.bt_type) {
@@ -279,16 +341,19 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
         if (log_if(4.3))
           std::cout << "R: Bitfield message "<< (unsigned short)(m1->payload.bitfiled.bitfield[0]) << std::endl;
         // Use the bitfield to assign a role to the Socket
-        setPieceAvailability(bt_args,m1,s);      
-      }break;
+        setPieceAvailability(bt_args,m1,s);
+      }break; 
       case BT_REQUEST: {
         // msg already has reqyuired data - no need to reparse      
         std::cout << "R: Got a request "  << std::endl;
+        sendData(bt_args,s,msg.payload.request.length,msg.payload.request.index,msg.payload.request.begin);
       }break;
       case BT_PIECE: {
         bt_msg_t *m1 = parsePieceMessage(buf, msg.length);
-        if (log_if(4.4))
-          std::cout << "R: Piece message "<< m1->payload.piece.piece << std::endl;
+        writeToFile(bt_args,m1,s);
+        // if (log_if(2.4))
+        //   std::cout << "R: Piece message "<< m1->payload.piece.piece << std::endl;
+        
       }break;
       }
     }break;  
@@ -385,7 +450,7 @@ void* createReciever (void* args) {
   bt_args_t *bt_args = t->bt_args;
   std::cout << "Polling " << sockfd << std::endl;  
   while (1) {
-    __npoll__(sockfd,handleData,bt_args);
+    __npoll__(sockfd,handleData,sendRequestForPieces,bt_args);
     // Pass this data to handler thread
     //__poll__(sockfd,handleData,t->bt_args);    
   }
