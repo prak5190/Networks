@@ -98,8 +98,6 @@ char* createBitfieldMessage(bt_args_t *bt_args,int &length1) {
       if (i%8 == 0) {
         bitfield[k] = (unsigned char) 0;
       }
-      // -2 Indicates piece exists     
-      completed_piece_to_socket_map.insert(std::make_pair(i,-2));
       bitfield[k] = (unsigned char) ((1 << 7-(i%8))  + bitfield[k]);      
     } else {
       bitfield[k] = (unsigned char) ((1 << 7-(i%8))  + bitfield[k]);  

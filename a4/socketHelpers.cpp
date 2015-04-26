@@ -141,8 +141,24 @@ int get_and_bind_socket(bt_args_t *bt_args) {
   }
   return -1;
 }
-
-
+char* createHaveMessage(int ind) {
+  bt_msg_t msg;  
+  msg.length = 0;
+  msg.bt_type = BT_HAVE;
+  msg.payload.have = ind;
+  char *message = new char[sizeof(msg)];
+  memcpy(message,(char*)&msg,sizeof(bt_msg_t));
+  return message;  
+};
+void sendHave(bt_args_t *bt_args, int piece ,int not_s) {
+  char* msg = createHaveMessage(piece);
+  for (auto it = url_to_socket_map.begin(); it != url_to_socket_map.end(); ++it) {
+    int s = it->second;
+    if (s != not_s) {
+      send(s,msg, sizeof(bt_msg_t),0);
+    }
+  }
+}
 int efd = epoll_create1(0);
 int receiver_efd = efd;
 void  __npoll__(int sfd,int (*cb)(bt_args_t*, vector<char>,int),int (*cb2)(bt_args_t*,int) , bt_args_t *bt_args) {
@@ -224,11 +240,28 @@ void  __npoll__(int sfd,int (*cb)(bt_args_t*, vector<char>,int),int (*cb2)(bt_ar
             cb(bt_args,finalStr,events[i].data.fd);
           }
      }
+     // Send out haves for pieces which have just completed 
+     int compCount = 0, remCount = 0;
+     for (auto it = completed_piece_to_socket_map.begin(); it != completed_piece_to_socket_map.end(); ++it) {
+       sendHave(bt_args, it->first,it->second);
+       compCount++;
+     }
+     completed_piece_to_socket_map.clear();
+     if (piece_to_socketlist_map.size() == 0) {
+       if (compCount > 0) {
+         // I am a seeder now
+         closeFile(string(bt_args->save_file));
+         std::cout << "Download finished - Will Seed now" << std::endl;
+         sleep(10);
+       }
+     }
      // Send request for pieces which ever are required
      for (auto it = socket_to_piecelist_map.begin(); it != socket_to_piecelist_map.end(); ++it) {
        int s = it->first;
+       remCount++;
        cb2(bt_args,s);
      }
+     
   }
 }
 

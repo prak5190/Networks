@@ -100,7 +100,11 @@ int sendRequestForPieces(bt_args_t *bt_args,int s) {
   if (piece_to_socket_map.size() == 0) {
     std::cout << "S: Am a seeder - No need to send a request " << std::endl;
     return 1;
-  } 
+  }
+  long file_size = bt_args->bt_info->length;
+  long num_pieces = bt_args->bt_info->num_pieces;
+  long piece_size = bt_args->bt_info->piece_length;
+  long last_piece_size = file_size % piece_size;  
   std::cout << "S: Pieces available in socket " << s << " : " << it1->second.size() << std::endl;
   for (auto it = piece_to_socket_map.begin(); it != piece_to_socket_map.end(); ++it) {
     std::cout << "Required piece " << it->first << std::endl;;
@@ -115,8 +119,13 @@ int sendRequestForPieces(bt_args_t *bt_args,int s) {
       // If positive - then it is already being downloaded by the socket 
       if (it2->second < 0){
         requ++;
+        // 
+        int blockSize = (1 << 15);
+        // This is the last piece
+        if (piece == num_pieces - 1) 
+          blockSize = last_piece_size;
         // Start request 
-        char *msg = createRequestMessage(bt_args,length,piece,(1 << 15) , 0);
+        char *msg = createRequestMessage(bt_args,length,piece,blockSize , 0);
         int n = send(s,msg,length,0);
         piece_to_socket_map.insert(std::make_pair(piece,s));
         if (n > 0){
@@ -227,29 +236,46 @@ void createSockAddr(int port,sockaddr_in *serv_addr) {
 void writeToFile(bt_args_t *bt_args, bt_msg_t *msg,int s) {
   string fs = string(bt_args->save_file);
   int pl = bt_args->bt_info->piece_length;
+  long file_size = bt_args->bt_info->length;
+  long num_pieces = bt_args->bt_info->num_pieces;
+  long piece_size = bt_args->bt_info->piece_length;
+  long last_piece_size = file_size % piece_size;  
+
   // If last then it should be remaining file size
   int totalPieceLength = pl;
   int length = msg->length;
   int index = msg->payload.piece.index;  
+  if (index == num_pieces - 1) 
+    totalPieceLength = last_piece_size;
   char* piece = msg->payload.piece.piece;
   int begin = msg->payload.piece.begin;
   // Calcalate start 
   long start = (index * pl) + begin;
+    
   assembleFile (fs,start, piece , length , false);  
-  if (begin + length >= totalPieceLength) {
+  long remaining_size = totalPieceLength - (begin + length);
+  if (remaining_size <= 0) {
     // Verify the integrity of piece 
     // If SHA matches 
     if (1) {
       piece_to_socket_map.erase(index);
       // Send a have 
+      completed_piece_to_socket_map.insert(std::make_pair(index,2));
       
     } else {
       //or else send a request for the starting piece       
+      int len;
+      int blockSize = (1 << 15);
+      blockSize = blockSize > totalPieceLength ? totalPieceLength : blockSize;
+      char *msg = createRequestMessage(bt_args,len,index,blockSize , 0);
+      int n = send(s,msg,len,0);
     }
   } else {
     // Request next part of this piece     
     int len;
-    char *msg = createRequestMessage(bt_args,len,index,(1 << 15) , begin + length);
+    int blockSize = (1 << 15);
+    blockSize = blockSize > remaining_size ? remaining_size : blockSize;
+    char *msg = createRequestMessage(bt_args,len,index,blockSize , begin + length);
     int n = send(s,msg,len,0);
   }
 }
@@ -336,6 +362,11 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
       }    
       // Now use the type to parse message 
       switch(msg.bt_type) {
+      case BT_HAVE: {
+        int addedPiece = msg.payload.have;
+        // Add to the map 
+        registerPiece(s,addedPiece);
+      }break;
       case BT_BITFILED: {
         bt_msg_t *m1 = parseBitField(buf, msg.length);
         if (log_if(4.3))

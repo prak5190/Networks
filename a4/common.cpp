@@ -72,8 +72,8 @@ using std::string;
 using std::vector;
 // #include "timeutil.cpp"
 #include "bt_lib.cpp"
-#include "socketHelpers.cpp"
 #include "fileHandler.cpp" 
+#include "socketHelpers.cpp"
 #include "bencode.cpp"
 #include "msgHandler.cpp"
 #endif
