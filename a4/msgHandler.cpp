@@ -3,9 +3,10 @@
 bt_msg_t* parseBitField(const char* message,int length) {
   bt_msg_t* msg1 = new bt_msg_t();
   memcpy((char*)msg1 , message , sizeof(bt_msg_t));  
-  char* msg = new char[length];
+  unsigned char* msg = new unsigned char[length];
   memcpy(msg,&message[sizeof(bt_msg_t)], length);
   msg1->payload.bitfiled.bitfield = msg;
+  std::cout << "R: Got THis BItfield Message " <<(msg[0] & (1 << 7)) << std::endl; 
   return msg1;
 }
 
@@ -22,7 +23,7 @@ char* createRequestMessage(bt_args_t *bt_args,int &l1,int ind , int length , int
   char *message = new char[sizeof(bt_msg_t)];
   l1 =  sizeof(bt_msg_t);  
   memcpy(message,(char*)&msg,sizeof(bt_msg_t));
-  return message;  
+  return message;   
 };
 
 bt_msg_t* parsePieceMessage(const char *message, int length) {
@@ -45,6 +46,32 @@ char* createPieceMessage(bt_args_t *bt_args, int &l1, char *data , int size , in
   return message;  
 }
 
+int* bitToIntArray(char *bits , int length) {
+  int *arr = new int[length];
+  int size = ceil((double)length/8);
+  int totalPieces = length;
+  int p = 0;
+  for (int i = 0; i < size ; i++) {
+    unsigned char a = bits[i];
+    // Check every bit
+    for (int j = 0; j < 8 ; j++) {
+      if (p < totalPieces) {
+        if (((a >> (7 - j)) & 1) == 1) {
+          arr[p] = 1;
+        } else {
+          arr[p] = 0;
+        }
+      } else {
+        break;
+      }
+      p++;
+    }
+    if (p >= totalPieces) 
+      break;
+  }
+  return arr;
+}
+
 char* createBitfieldMessage(bt_args_t *bt_args,int &length1) {
   bt_msg_t msg;  
   msg.bt_type = BT_BITFILED;
@@ -59,7 +86,7 @@ char* createBitfieldMessage(bt_args_t *bt_args,int &length1) {
   if (length < fileSize) {
     // Do something to shrink the file
   }
-  char bitfield[(int)ceil((double)num_pieces/8)];
+  unsigned char *bitfield = new unsigned char[(int)ceil((double)num_pieces/8)]; 
   for (int i  = 0; i < num_pieces ; i++) {
     int k = (int) i/8;
     bzero(data,sizeof(data));
@@ -68,30 +95,33 @@ char* createBitfieldMessage(bt_args_t *bt_args,int &length1) {
     fileSize -= off;
     char id[20];
     calc_sha(data,off,id);  
-    if (strncmp(id,pieces[i],20) == 0) {
+    if (strncmp(id,pieces[i],20) == 0) {  
       if (i%8 == 0) {
-        bitfield[k] = (unsigned char) 0;        
+        bitfield[k] = (unsigned char) 0;
       }
       // -2 Indicates piece exists     
       completed_piece_to_socket_map.insert(std::make_pair(i,-2));
-      bitfield[k] = (unsigned char)((1 << 7-(i%8))  + bitfield[k]);      
+      bitfield[k] = (unsigned char) ((1 << 7-(i%8))  + bitfield[k]);      
     } else {
+      bitfield[k] = (unsigned char) ((1 << 7-(i%8))  + bitfield[k]);  
       // -1 indicates piece doesn't exist - Now populate this with sockets attempting to download it
       if (piece_to_socket_map.find(i) == piece_to_socket_map.end()) {
         piece_to_socket_map.insert(std::make_pair(i,-1));
       }
     }
-  }
-
+  }  
   closeFile(name);
   // The serialization of the message -
   msg.payload.bitfiled.size = sizeof (bitfield);
   msg.length = sizeof(bitfield);
   char *message= new char[msg.length];
-  memcpy(message + sizeof(msg),bitfield,sizeof(bitfield));
-  msg.payload.bitfiled.bitfield = &message[sizeof(msg)];
+  memcpy(message + sizeof(msg), bitfield , sizeof(bitfield));
+  //msg.payload.bitfiled.bitfield = &message[sizeof(msg)];
   memcpy(message,(char*) &msg,sizeof(msg));  
-  length1 = msg.length;   
+  length1 = msg.length;
+  // Set it in args
+  bt_args->bitfieldMsg = message;
+  bt_args->bitfield_length = length1;
   return message;
 }
 

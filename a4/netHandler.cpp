@@ -46,7 +46,7 @@ int getRandomPieceToDownload() {
 }
 void setPieceAvailability(bt_args_t *bt_args,bt_msg_t *msg,int s) {
   int size = msg->payload.bitfiled.size;
-  char *bits = msg->payload.bitfiled.bitfield;
+  unsigned char *bits = msg->payload.bitfiled.bitfield;
   int totalPieces = bt_args->bt_info->num_pieces;
   int p = 0;
   for (int i = 0; i < size ; i++) {
@@ -98,82 +98,47 @@ void sendRequestForPieces(bt_args_t *bt_args,int s) {
   if (requ == 0) 
     std::cout << "S: No Useful data found from socket "<< s << std::endl;
 }
-int handleData(bt_args_t *bt_args,const char* buf , int s) {
-  int cbType = 0;
-  if (buf[0] == 19) {
-    cbType = 0;
-  } else {             
-    cbType = 1;     
-  }
-  switch(cbType) {
-  case 0 : {
-    // Handshake message - Lets parse it 
-    handshake_msg_t hmsg;
-    hmsg.parse(buf);
-    std::cout << "R: Peer Id " <<  hmsg.peerId << std::endl;
-  }break;
-  case 1: {
-    bt_msg_t msg;
-    memset((char*)&msg,0x00,sizeof(msg));
-    memcpy((char*)&msg , buf , sizeof(bt_msg_t));
-    if (log_if(4.2)) {
-      std::cout << "\nR: Data - Type : " << msg.bt_type << " - Buffer " << buf << std::endl; 
-    }    
-    // Now use the type to parse message 
-    switch(msg.bt_type) {
-    case BT_BITFILED: {
-      bt_msg_t *m1 = parseBitField(buf, msg.length);
-      if (log_if(4.3))
-        std::cout << "R: Bitfield message "<< m1->payload.bitfiled.bitfield << std::endl;
-      // Use the bitfield to assign a role to the Socket
-      setPieceAvailability(bt_args,m1,s);      
-    }break;
-    case BT_REQUEST: {
-      // msg already has reqyuired data - no need to reparse      
-      std::cout << "R: Got a request "  << std::endl;
-    }break;
-    case BT_PIECE: {
-      bt_msg_t *m1 = parsePieceMessage(buf, msg.length);
-      if (log_if(4.4))
-        std::cout << "R: Piece message "<< m1->payload.piece.piece << std::endl;
-    }break;
-    }
-  }break;  
-  default: {
-    std::cout << "R: Buffer Overflow - SOme error  " << std::endl;
-    // sleep(1);
-    // Do something with the data    
-  }break;
-  }
-  return 0;
-}
 
 int sendHandshakeMsg(bt_args_t *bt_args, int s) {
-  handshake_msg_t msg;
+  handshake_msg_t msg , k;
   msg.setData(bt_args->bt_info->info_hash,string("dasda11111s"));     
-  string message = msg.toString();
-  std::cout << "SOCKET " << s << std::endl;
-  int n = send(s,message.c_str(),message.length(),0);
+  char message[sizeof(msg)];  
+  memcpy(message , (char*) &msg , sizeof(handshake_msg_t));
+  std::cout << "HAND: Sending Message "<<sizeof(handshake_msg_t)  << std::endl;
+  k.parse(message);
+  std::cout << "HAND: Parse ID " << k.peerId << std::endl;
+  int n = send(s,message,sizeof(handshake_msg_t),0);
   if (n >= 0) {
     registerSocket(s);
   }
   return n;
 }
 
-int sendBitFieldMessage(bt_args_t *bt_args) {
-  int length = 0;
-  char* m = createBitfieldMessage(bt_args,length);    
-  // Send data to all   
-  for (auto it = socket_to_piecelist_map.begin(); it != socket_to_piecelist_map.end(); ++it) {
-    int s = it->first;
-    int n = send(s,m,sizeof(bt_msg_t) + length,0); 
-    //bt_msg_t *mgs = parseBitField(m,length);
-    if (n > 0) {
-      std::cout << "S: Message sent "<< s << std::endl;
-    }
-  }
-  return 0;
+
+int sendBitFieldMessage(bt_args_t *bt_args , int s) {  
+  char* m = bt_args->bitfieldMsg;
+  int length = bt_args->bitfield_length;
+  int n = send(s,m,sizeof(bt_msg_t) + length,0); 
+  //bt_msg_t *mgs = parseBitField(m,length);
+  if (n < 0) {
+    std::cout << "S:Bitfield Message sending failed  "<< s << std::endl;
+  } 
+  return 0;  
 }
+// int sendBitFieldMessage(bt_args_t *bt_args , int s) {
+  
+//   char* m = createBitfieldMessage(bt_args,length);    
+//   // Send data to all   
+//   for (auto it = socket_to_piecelist_map.begin(); it != socket_to_piecelist_map.end(); ++it) {
+//     int s = it->first;
+//     int n = send(s,m,sizeof(bt_msg_t) + length,0); 
+//     //bt_msg_t *mgs = parseBitField(m,length);
+//     if (n > 0) {
+//       std::cout << "S: Message sent "<< s << std::endl;
+//     }
+//   }
+//   return 0;
+// }
 
 // void findNewPeers() {
 //   int port = INIT_PORT;
@@ -226,6 +191,119 @@ void createSockAddr(int port,sockaddr_in *serv_addr) {
   serv_addr->sin_addr.s_addr = htonl(2130706433);
   //bcopy((char *)server->h_addr, (char *)serv_addr->sin_addr.s_addr, server->h_length);
 }
+
+std::vector<char> oldData;
+int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
+  if (oldData.size() > 0)
+    vbuf.insert(vbuf.begin(),oldData.begin(),oldData.end());
+  int cbType = 0;
+  char* start = &vbuf[0]; 
+  char* buf = start;
+  if (buf[0] == 19) {
+    cbType = 0;
+  } else {             
+    cbType = 1;     
+  }
+  int done = -1;
+  if (log_if (3.3))
+    std::cout << "R: Vector Size  : "<< vbuf.size() << std::endl;
+  int totalSize = vbuf.size();
+  while(1) {
+    buf = start;
+    // Just validate copy part of data required
+    int sze = 0;
+    switch(cbType) {      
+    case 0 : {
+      sze = sizeof(handshake_msg_t);      
+    }break;
+    case 1: {
+      if (totalSize > sizeof (bt_msg_t)) {
+        bt_msg_t t;
+        memcpy((char*)&t, buf, sizeof(bt_msg_t));
+        std::cout << "R: Size is " << t.length << "  , Type :  "<< t.bt_type  << std::endl;
+        sze = t.length + sizeof(t);
+        done = 0;
+      } else {        
+        // Store data in temp var 
+        done = 1;
+      }
+    }break;  
+    default: {
+      std::cout << "R: Buffer Overflow - SOme error  " << std::endl;
+      // Do something with the data    
+    }break;
+    }
+    if (done <= 0 && totalSize >= sze) {
+        totalSize -= sze;
+        start += sze;
+        oldData.clear();
+    } else {
+      // Store data in temp var 
+      oldData.clear();
+      for( int k = 0 ; k < totalSize ; k++){ 
+        oldData.insert(oldData.end(),*start);
+        start++;
+      }
+      done = 1;
+      break;
+    }
+    
+    /************* Now parse the data ***********/
+    switch(cbType) {
+    case 0 : {
+      // Handshake message - Lets parse it 
+      handshake_msg_t hmsg;
+      hmsg.parse(buf);
+      //bt_args->bitfieldMsg
+      std::cout << "R: Peer Id " <<  hmsg.peerId << std::endl;    
+      int port = getSocketPort(s);
+      if (port != -1) {
+        if (url_to_socket_map.find(string("localhost:") +std::to_string(port)) == url_to_socket_map.end()) {
+          // send handshake
+          url_to_socket_map.insert(std::make_pair(string("localhost:")+std::to_string(port), s));
+          sendHandshakeMsg(bt_args,s);
+        }
+      }    
+    }break;
+    case 1: {
+      bt_msg_t msg;
+      memset((char*)&msg,0x00,sizeof(msg));
+      memcpy((char*)&msg , buf , sizeof(bt_msg_t));
+      if (log_if(4.2)) {
+        std::cout << "\nR: Data - Type : " << msg.bt_type << " - Buffer " << buf << std::endl; 
+      }    
+      // Now use the type to parse message 
+      switch(msg.bt_type) {
+      case BT_BITFILED: {
+        bt_msg_t *m1 = parseBitField(buf, msg.length);
+        if (log_if(4.3))
+          std::cout << "R: Bitfield message "<< (unsigned short)(m1->payload.bitfiled.bitfield[0]) << std::endl;
+        // Use the bitfield to assign a role to the Socket
+        setPieceAvailability(bt_args,m1,s);      
+      }break;
+      case BT_REQUEST: {
+        // msg already has reqyuired data - no need to reparse      
+        std::cout << "R: Got a request "  << std::endl;
+      }break;
+      case BT_PIECE: {
+        bt_msg_t *m1 = parsePieceMessage(buf, msg.length);
+        if (log_if(4.4))
+          std::cout << "R: Piece message "<< m1->payload.piece.piece << std::endl;
+      }break;
+      }
+    }break;  
+    default: {
+      std::cout << "R: Buffer Overflow - SOme error  " << std::endl;
+      // sleep(1);
+      // Do something with the data    
+    }break;
+    }    
+    if (done)
+      break;    
+  }  
+  return 0;
+}
+
 void* initHandshake (void* args) {
   thread_args *t = (thread_args*) args;
   int sfd = t->s; 
@@ -240,11 +318,11 @@ void* initHandshake (void* args) {
   //sleep(2);
   std::cout << "S: Start Init Handshake" << std::endl;
   for (port = INIT_PORT; port < MAX_PORT ; port++) {
-    if (port != ownPort) {
+    if (port != ownPort && (url_to_socket_map.find("localhost:" + std::to_string(port)) == url_to_socket_map.end())) {
       sockaddr_in serv_addr;
       createSockAddr(port,&serv_addr);
       //create and connect as much as needed        
-      if (create_and_connect(&serv_addr, efd) != 0) {
+      if (create_and_connect(&serv_addr, efd , port) != 0) {
         std::cout << "SE: Create and connect Error " << std::endl;
         exit(1);
       }
@@ -264,9 +342,9 @@ void* initHandshake (void* args) {
   char buf[BUFFER_SIZE];
   while(1) {
     n = epoll_wait (efd,events,MAXEVENTS,1000);
-    //if (n > 0)  
+    if (n > 0)  
       std::cout << "S: Got "<< n << " events for "<< sfd << std::endl;
-    for (i=0;i<n;i++) {
+    for (i=0;i<n;i++) {      
       if ((events[i].events & EPOLLERR) ||
           (events[i].events & EPOLLHUP)) {
         //std::cout << events[i].events << std::endl;
@@ -277,18 +355,21 @@ void* initHandshake (void* args) {
           std::cout << "SE : Write Handshake error " << std::endl;
           continue;
         } else {
-          int dc = sendHandshakeMsg(bt_args,events[i].data.fd);
+          int dc =  sendHandshakeMsg(bt_args,events[i].data.fd);
+          sendBitFieldMessage(bt_args,events[i].data.fd);
           if (dc < 0) {
             std::cout << "SE: Handshake send failed" << std::endl;
             abort();
           } else {
+
+            //handshake_socket_set.insert(events[i].data.fd);
             std::cout << "SE : Hanshake Success " << std::endl;
             event_mask.events = EPOLLIN | EPOLLRDHUP | EPOLLERR | EPOLLET;
             event_mask.data.fd = events[i].data.fd;                        
             if(epoll_ctl(receiver_efd, EPOLL_CTL_ADD, events[i].data.fd, &event_mask) != 0) {
               perror("epoll_ctl, modify socket\n");
               exit(1);
-            }
+            }  
           }
         }       
       }
@@ -298,7 +379,6 @@ void* initHandshake (void* args) {
   // sendBitFieldMessage(bt_args);
   return 0;
 }
-
 void* createReciever (void* args) {
   thread_args *t = (thread_args*) args;
   int sockfd = t->s;  

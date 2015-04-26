@@ -57,7 +57,7 @@ int main (int argc, char * argv[]){
   parseTorrentFile(bt_args);
   int length;
   // Populate bit field and maps
-  createBitfieldMessage(bt_args,length);  
+  createBitfieldMessage(bt_args,length);
   int s = get_and_bind_socket2(bt_args);  
   int err = make_socket_non_blocking(s);
   if (err == -1) {

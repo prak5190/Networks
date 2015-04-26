@@ -69,6 +69,7 @@ int thread_timed_wait (pthread_mutex_t &mut ,pthread_cond_t &cond ,int mseconds)
 };
 
 using std::string;
+using std::vector;
 // #include "timeutil.cpp"
 #include "bt_lib.cpp"
 #include "socketHelpers.cpp"

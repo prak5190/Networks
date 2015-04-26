@@ -145,7 +145,7 @@ int get_and_bind_socket(bt_args_t *bt_args) {
 
 int efd = epoll_create1(0);
 int receiver_efd = efd;
-void  __npoll__(int sfd,int (*cb)(bt_args_t*,const char*,int) , bt_args_t *bt_args) {
+void  __npoll__(int sfd,int (*cb)(bt_args_t*, vector<char>,int) , bt_args_t *bt_args) {
   if (efd == -1) {
     std::cout << "RE: Fatal Epoll create error " << std::endl;
     abort();
@@ -163,7 +163,7 @@ void  __npoll__(int sfd,int (*cb)(bt_args_t*,const char*,int) , bt_args_t *bt_ar
   while(1) {
     n = epoll_wait (efd,events,MAXEVENTS,1000);
     if (n > 0) 
-      std::cout << "Got "<< n << " events for "<< sfd << std::endl;
+      std::cout << "R: Got "<< n << " events for "<< sfd << std::endl;
      for (i=0;i<n;i++) {
           if ((events[i].events & EPOLLERR) ||
                 (events[i].events & EPOLLHUP) ||
@@ -171,7 +171,6 @@ void  __npoll__(int sfd,int (*cb)(bt_args_t*,const char*,int) , bt_args_t *bt_ar
             std::cout << events[i].events << std::endl;
             std::cout << "RE : Error receiving " << std::endl;
           } else if (sfd == events[i].data.fd) {
-            std::cout << "Can connect " << std::endl;
             while (1) {
               struct sockaddr in_addr;
               socklen_t in_len;
@@ -205,34 +204,43 @@ void  __npoll__(int sfd,int (*cb)(bt_args_t*,const char*,int) , bt_args_t *bt_ar
               }
             }            
           } else {
-            string finalStr = "";
+            vector<char> finalStr;
+            finalStr.clear();
             while (1) {
               memset(buf , 0x00 , sizeof(buf));
               ssize_t count; 
               count = recv(events[i].data.fd, buf, BUFFER_SIZE , 0);
-              finalStr += buf;
               if (count < 0)
-                break;                    
-            }              
-            int count = 10; 
-            std::ostringstream convert;
-            convert<<"From Port " << bt_args->port ;
-            int k = send(events[i].data.fd,convert.str().c_str(),convert.str().length(),MSG_DONTWAIT | MSG_MORE);
-            if (k < 0) {
-              std::cout << "R: Send failed " << std::endl;
-              abort();
+                break;
+              for (int ii = 0; ii < count; ii++) {
+                finalStr.insert(finalStr.end(),buf[ii]);
+              }
+            }                        
+            std::cout << "R: Recieved Data " << finalStr.size();
+            for (auto it = finalStr.begin(); it != finalStr.end(); ++it) {
+              std::cout<<*it;
             }
-            std::cout << "R: Recieved Data "<<finalStr << std::endl;
-            cb(bt_args,finalStr.c_str(),events[i].data.fd);
+            std::cout<< std::endl;
+            cb(bt_args,finalStr,events[i].data.fd);
           }
      }
   }
 }
 
+int getSocketPort(int s) {
+  sockaddr_in adr;
+  socklen_t adr_l;
+  int n = getsockname(s,(sockaddr*)&adr , &adr_l);
+  if (n == 0) {
+    return adr.sin_port;
+  } else 
+    return -1;
+}
+
 /* create a TCP socket with non blocking options and connect it to the target
 * if succeed, add the socket in the epoll list and exit with 0
 */
-int create_and_connect( sockaddr_in* target , int epfd)
+int create_and_connect( sockaddr_in* target , int epfd , int port)
 {
    int yes = 1;
    int sock;
@@ -276,7 +284,7 @@ int create_and_connect( sockaddr_in* target , int epfd)
          exit(1);
       }
    }
-
+   url_to_socket_map.insert(std::make_pair(string("localhost:")+std::to_string(port), sock));
    return 0;
 }
 
@@ -289,9 +297,8 @@ int connect_to_addr(sockaddr_in *target , int epfd)
    int sock;
 
    // epoll mask that contain the list of epoll events attached to a network socket
-   static struct epoll_event Edgvent;
-   if( connect(sock, (struct sockaddr *)target, sizeof(struct sockaddr)) == -1
-      && errno != EINPROGRESS)
+   static struct epoll_event Edgvent; 
+   if(connect(sock,(struct sockaddr *)target, sizeof(struct sockaddr)) == -1 && errno != EINPROGRESS)
    {
       // connect doesn't work, are we running out of available ports ? if yes, destruct the socket
       if (errno == EAGAIN)
