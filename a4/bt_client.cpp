@@ -57,39 +57,34 @@ int main (int argc, char * argv[]){
   parseTorrentFile(bt_args);
   int length;
   // Populate bit field and maps
-  createBitfieldMessage(bt_args,length);
-  int s = get_and_bind_socket(bt_args);
-  pthread_t sth ,rth; 
+  createBitfieldMessage(bt_args,length);  
+  int s = get_and_bind_socket2(bt_args);  
+  int err = make_socket_non_blocking(s);
+  if (err == -1) {
+    std::cout << "Not able to make socket unblocking " << std::endl;
+    abort();
+  }
+  err = listen(s,SOMAXCONN);
+  if (err ==-1) {
+    std::cout << "Unable to listen " << std::endl;
+    abort();
+  }
+
+  pthread_t sth ,rth , hth; 
   if (s != -1) {
     rth = startRecieverThread(bt_args,s);
-    // if (bt_args.num_peers > 0) { 
-    sth = startSenderThread(bt_args,s); 
-    // }
+    sth = startSenderThread(bt_args,s);
+    //hth = startHandlerThread(bt_args,s);
   }
-  // while(1){
-  //   std::cout << "Working "<<i  << std::endl;
-  //   i++; 
-  //   //try to accept incoming connection from new peer
-  //   break;
-       
-  //   //poll current peers for incoming traffic
-  //   //   write pieces to files
-  //   //   udpdate peers choke or unchoke status      
-  //   //   responses to have/havenots/interested etc.
-  //   //for peers that are not choked
-  //   //   request pieaces from outcoming traffic
-
-  //   //check livelenss of peers and replace dead (or useless) peers      
-  //   //with new potentially useful peers
-    
-  //   //update peers, 
- 
-  // }
   
   if (rth != 0) {
     std::cout << "joining reci thread " << std::endl;
     pthread_join(rth,NULL);  
   }
+  // if (hth != 0) {
+  //   std::cout << "joining handler thread " << std::endl;
+  //   pthread_join(hth,NULL);  
+  // }
   if (sth != 0) {
     std::cout << "joining send  thread " << std::endl;
     pthread_join(sth,NULL);

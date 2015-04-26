@@ -19,7 +19,7 @@ function create_peer(name , save_file,port) {
     peerStr = " -p localhost:"+port + " " ;
   if (save_file)
     saveStr = " -s "+save_file + " ";
-  var command = "./bt_client -v 4"+ peerStr + saveStr + "moby_dick.txt.torrent > ~/" + name + ".log";
+  var command = "./bt_client -v 4.2"+ peerStr + saveStr + "moby_dick.txt.torrent > ~/" + name + ".log";
   console.log("COmmand " ,command);
   return child_process.exec(command, function (error, stdout, stderr) {
     //console.log('stdout: ' + stdout);

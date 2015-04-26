@@ -1,6 +1,6 @@
 #include "common.cpp"
 
-bt_msg_t* parseBitField(char* message,int length) {
+bt_msg_t* parseBitField(const char* message,int length) {
   bt_msg_t* msg1 = new bt_msg_t();
   memcpy((char*)msg1 , message , sizeof(bt_msg_t));  
   char* msg = new char[length];
@@ -25,7 +25,7 @@ char* createRequestMessage(bt_args_t *bt_args,int &l1,int ind , int length , int
   return message;  
 };
 
-bt_msg_t* parsePieceMessage(char *message, int length) {
+bt_msg_t* parsePieceMessage(const char *message, int length) {
   bt_msg_t *msg1 = new bt_msg_t();
   memcpy((char*)msg1 , message , sizeof(bt_msg_t));  
   char* msg = new char[length];
@@ -57,7 +57,7 @@ char* createBitfieldMessage(bt_args_t *bt_args,int &length1) {
   string name = string(fname);
   long fileSize = getFileSize(name);
   if (length < fileSize) {
-    // Do something to shrink the file    
+    // Do something to shrink the file
   }
   char bitfield[(int)ceil((double)num_pieces/8)];
   for (int i  = 0; i < num_pieces ; i++) {
