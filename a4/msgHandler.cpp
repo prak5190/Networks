@@ -200,7 +200,6 @@ int sendRequestForPieces(bt_args_t *bt_args,int s) {
       // If positive - then it is already being downloaded by the socket 
       bool isWaiting = false;
       if (it2->second > 0) {
-
         isWaiting = true;
       }
       if (!isWaiting) {
@@ -230,7 +229,9 @@ int sendRequestForPieces(bt_args_t *bt_args,int s) {
 
 int sendHandshakeMsg(bt_args_t *bt_args, int s) {
   handshake_msg_t msg , k;
-  msg.setData(bt_args->bt_info->info_hash,string("dasda11111s"));     
+  char id[20];
+  calc_id("localhost",bt_args->port,id);
+  msg.setData(bt_args->bt_info->info_hash,string(id));
   char message[sizeof(msg)];  
   memcpy(message , (char*) &msg , sizeof(handshake_msg_t));
   std::cout << "HAND: Sending Message "<<sizeof(handshake_msg_t)  << std::endl;

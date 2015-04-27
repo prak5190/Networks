@@ -90,7 +90,7 @@ void writeToFile(bt_args_t *bt_args, bt_msg_t *msg,int s) {
   // Calcalate start 
   long start = (index * pl) + begin;
   
-  assembleFile (fs,start, piece , length , true);  
+  assembleFile (fs,start, piece , length , false);
   long remaining_size = totalPieceLength - (begin + length);
   if (remaining_size <= 0) {
     // Verify the integrity of piece 
@@ -249,7 +249,7 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
       case BT_PIECE: {
         bt_msg_t *m1 = parsePieceMessage(buf, msg.length);
         if (log_if(4.3))
-          std::cout << "R: Got data - I:B:L " << msg.payload.piece.index << " - " << msg.payload.piece.begin << std::endl;
+          std::cout << "R: Got data - I:B:L " << msg.payload.piece.index << " - " << msg.payload.piece.begin << " - " << msg.length<< std::endl;
         // Don't write if already written to
         if (piece_to_socket_map.find(msg.payload.piece.index) != piece_to_socket_map.end()) {
           writeToFile(bt_args,m1,s);

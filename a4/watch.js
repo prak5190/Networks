@@ -40,10 +40,13 @@ function run() {
   kill_all();
   if(make()) { 
     console.log("Triggering processes ");
-    // var torrentFile = "download.mp3.torrent";
-    var torrentFile = "moby_dick.txt.torrent";
-    create_peer("s1","s1-moby.txt",torrentFile);
-    create_peer("s2","s2-moby.txt",torrentFile);
+    var torrentFile = "download.mp3.torrent";
+    create_peer("s1","s1.mp3",torrentFile);
+    create_peer("s2","s2.mp3",torrentFile);
+
+    // var torrentFile = "moby_dick.txt.torrent";
+    // create_peer("s1","s1-moby.txt",torrentFile);
+    // create_peer("s2","s2-moby.txt",torrentFile);
   }
 }
 
