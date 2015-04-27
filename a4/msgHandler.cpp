@@ -122,3 +122,104 @@ char* createBitfieldMessage(bt_args_t *bt_args,int &length1) {
   return message;
 }
 
+
+int sendData(bt_args_t *bt_args, int s, int length, int index, int begin) {
+  // Calculate start of file 
+  long pl = bt_args->bt_info->piece_length;
+  long start = index * pl + begin; 
+  string sf = string(bt_args->save_file);
+  char data[length];
+  if (index == bt_args->bt_info->num_pieces) {
+    // DO something to demarcate end of file
+  }
+  getPacketFile(sf,data, start,length, false);
+  char message[sizeof(bt_msg_t) + length];
+  bt_msg_t t; 
+  t.bt_type = 7;
+  t.length = length;
+  t.payload.piece.index = index;
+  t.payload.piece.begin = begin; 
+  memcpy(message,(char*)&t,sizeof(t));
+  memcpy(&message[sizeof(t)],data,length);
+  int n = send(s,message,sizeof(message),0);
+  if (n >= 0) {
+    std::cout << "S: Data Sent of length " << length  << std::endl;
+  } else {
+    std::cout << "SE: Error sending piece " << std::endl;
+    return -1;
+  }
+  return 0;
+}
+int sendRequestForPieces(bt_args_t *bt_args,int s) {
+  auto it1 = socket_to_piecelist_map.find(s);
+  int requ = 0;
+  if (piece_to_socket_map.size() == 0) {
+    std::cout << "S: Am a seeder - No need to send a request " << std::endl;
+    return 1;
+  }
+  long file_size = bt_args->bt_info->length;
+  long num_pieces = bt_args->bt_info->num_pieces;
+  long piece_size = bt_args->bt_info->piece_length;
+  long last_piece_size = file_size % piece_size;  
+  std::cout << "S: Pieces available in socket " << s << " : " << it1->second.size() << std::endl;
+  for (auto it = piece_to_socket_map.begin(); it != piece_to_socket_map.end(); ++it) {
+    std::cout << "Required piece " << it->first << std::endl;;
+  }
+  for (auto it = it1->second.begin(); it != it1->second.end(); ++it) {
+    int length = 0;
+    int piece = *it;
+    std::cout << "S: Piece Available is " << piece << std::endl;
+    // If piece is not in file - it will exist in map
+    auto it2 = piece_to_socket_map.find(piece);
+    if (it2 != piece_to_socket_map.end()){      
+      // If positive - then it is already being downloaded by the socket 
+      if (it2->second < 0){
+        requ++;
+        // 
+        int blockSize = (1 << 15);
+        // This is the last piece
+        if (piece == num_pieces - 1) 
+          blockSize = last_piece_size;
+        // Start request 
+        char *msg = createRequestMessage(bt_args,length,piece,blockSize , 0);
+        int n = send(s,msg,length,0);
+        piece_to_socket_map.insert(std::make_pair(piece,s));
+        if (n > 0){
+          std::cout << "S: Sending request *********************"<< s << "    " << std::endl;       
+        } else {
+          std::cout << "SE: Failed " << strerror(errno) << std::endl;
+        }
+      }
+    }
+  }
+  if (requ == 0) 
+    std::cout << "S: No Useful data found from socket "<< s << std::endl;
+  return 0;
+}
+
+int sendHandshakeMsg(bt_args_t *bt_args, int s) {
+  handshake_msg_t msg , k;
+  msg.setData(bt_args->bt_info->info_hash,string("dasda11111s"));     
+  char message[sizeof(msg)];  
+  memcpy(message , (char*) &msg , sizeof(handshake_msg_t));
+  std::cout << "HAND: Sending Message "<<sizeof(handshake_msg_t)  << std::endl;
+  k.parse(message);
+  std::cout << "HAND: Parse ID " << k.peerId << std::endl;
+  int n = send(s,message,sizeof(handshake_msg_t),0);
+  if (n >= 0) {
+    registerSocket(s);
+  }
+  return n;
+}
+
+
+int sendBitFieldMessage(bt_args_t *bt_args , int s) {  
+  char* m = bt_args->bitfieldMsg;
+  int length = bt_args->bitfield_length;
+  int n = send(s,m,sizeof(bt_msg_t) + length,0); 
+  //bt_msg_t *mgs = parseBitField(m,length);
+  if (n < 0) {
+    std::cout << "S:Bitfield Message sending failed  "<< s << std::endl;
+  } 
+  return 0;  
+}

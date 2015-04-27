@@ -77,7 +77,7 @@ int main (int argc, char * argv[]){
     abort();
   }
 
-  pthread_t sth ,rth , hth; 
+  pthread_t sth ,rth; 
   if (s != -1) {
     rth = startRecieverThread(bt_args,s);
     sth = startSenderThread(bt_args,s);
@@ -88,10 +88,7 @@ int main (int argc, char * argv[]){
     std::cout << "joining reci thread " << std::endl;
     pthread_join(rth,NULL);  
   }
-  // if (hth != 0) {
-  //   std::cout << "joining handler thread " << std::endl;
-  //   pthread_join(hth,NULL);  
-  // }
+
   if (sth != 0) {
     std::cout << "joining send  thread " << std::endl;
     pthread_join(sth,NULL);
