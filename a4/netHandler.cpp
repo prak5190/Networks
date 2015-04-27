@@ -280,7 +280,6 @@ void writeToFile(bt_args_t *bt_args, bt_msg_t *msg,int s) {
   }
 }
 
-std::vector<char> oldData;
 int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
   if (oldData.size() > 0)
     vbuf.insert(vbuf.begin(),oldData.begin(),oldData.end());

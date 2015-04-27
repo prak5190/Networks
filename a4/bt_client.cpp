@@ -55,6 +55,13 @@ bt_args_t *bt_args = new bt_args_t();
 int main (int argc, char * argv[]){  
   parseCmdArgs(bt_args,argc,argv);   
   parseTorrentFile(bt_args);
+
+  // Ensure save file is of correct size
+  long size = getFileSize(string(bt_args->save_file));
+  if (size < bt_args->bt_info->length)
+    createFile( string(bt_args->save_file), bt_args->bt_info->length);   
+  closeFile(string(bt_args->save_file));
+
   int length;
   // Populate bit field and maps
   createBitfieldMessage(bt_args,length);
