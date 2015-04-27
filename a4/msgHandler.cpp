@@ -86,21 +86,29 @@ char* createBitfieldMessage(bt_args_t *bt_args,int &length1) {
     // Do something to shrink the file
   }
   unsigned char *bitfield = new unsigned char[(int)ceil((double)num_pieces/8)]; 
-  for (int i  = 0; i < num_pieces ; i++) {
-    int k = (int) i/8;
+  int k = 0;
+  for (int i  = 0; i < num_pieces ; i++) {    
+    k = (int) i/8;
+    if (i%8 == 0) {
+      bitfield[k] = (unsigned char) 0;
+    }    
     bzero(data,sizeof(data));
     long off  = piece_length < fileSize ? piece_length : fileSize;
     getPacketFile (name,data, i * piece_length,off , false);
     fileSize -= off;
     char id[20];
     calc_sha(data,off,id);  
-    if (strncmp(id,pieces[i],20) == 0) {  
-      if (i%8 == 0) {
-        bitfield[k] = (unsigned char) 0;
+    bool flag = true;
+    for (int m = 0; m < 20 ; m++) {
+      if ((char)pieces[i][m] != (char)id[i]) {
+        flag = false;
+        break;
       }
-      bitfield[k] = (unsigned char) ((1 << 7-(i%8))  + bitfield[k]);      
+    }
+    if (strncmp(id,pieces[i],20) == 0) {  
+      bitfield[k] = (unsigned char) ((1 << (7-(i%8)))  + bitfield[k]);      
     } else {
-      bitfield[k] = (unsigned char) ((1 << 7-(i%8))  + bitfield[k]);  
+      //bitfield[k] = (unsigned char) ((1 << 7-(i%8))  + bitfield[k]);  
       // -1 indicates piece doesn't exist - Now populate this with sockets attempting to download it      
       if (piece_to_socket_map.find(i) == piece_to_socket_map.end()) {
         piece_to_socket_map.insert(std::make_pair(i,-1));

@@ -50,7 +50,7 @@ void setPieceAvailability(bt_args_t *bt_args,bt_msg_t *msg,int s) {
   int totalPieces = bt_args->bt_info->num_pieces;
   int p = 0;
   for (int i = 0; i < size ; i++) { 
-    unsigned char a = bits[i];
+    unsigned char a = (unsigned char)bits[i];
     // Check every bit
     for (int j = 0; j < 8 ; j++) {
       if (p < totalPieces) {
@@ -104,6 +104,9 @@ void writeToFile(bt_args_t *bt_args, bt_msg_t *msg,int s) {
       blockSize = blockSize > totalPieceLength ? totalPieceLength : blockSize;
       char *msg = createRequestMessage(bt_args,len,index,blockSize , 0);
       int n = send(s,msg,len,0);
+      if (n < 0) {
+        std::cout << "R: Send Create request failed" << std::endl;
+      }
     }
   } else {
     // Request next part of this piece     
@@ -112,6 +115,9 @@ void writeToFile(bt_args_t *bt_args, bt_msg_t *msg,int s) {
     blockSize = blockSize > remaining_size ? remaining_size : blockSize;
     char *msg = createRequestMessage(bt_args,len,index,blockSize , begin + length);
     int n = send(s,msg,len,0);
+    if (n < 0) {
+      std::cout << "R: Send Create request failed" << std::endl;
+    }
   }
 }
 
@@ -139,7 +145,7 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
       sze = sizeof(handshake_msg_t);      
     }break;
     case 1: {
-      if (totalSize > sizeof (bt_msg_t)) {
+      if ((unsigned int)totalSize > sizeof (bt_msg_t)) {
         bt_msg_t t;
         memcpy((char*)&t, buf, sizeof(bt_msg_t));
         std::cout << "R: Size is " << t.length << "  , Type :  "<< t.bt_type  << std::endl;
@@ -269,7 +275,6 @@ void* initHandshake (void* args) {
   // }  
 
   int n,i;
-  char buf[BUFFER_SIZE];
   while(1) {
     n = epoll_wait (efd,events,MAXEVENTS,1000);
     if (n > 0)  

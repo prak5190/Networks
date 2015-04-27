@@ -337,37 +337,4 @@ int create_and_connect( sockaddr_in* target , int epfd , int port)
    return 0;
 }
 
-/* create a TCP socket with non blocking options and connect it to the target
-* if succeed, add the socket in the epoll list and exit with 0
-*/
-int connect_to_addr(sockaddr_in *target , int epfd)
-{
-   int yes = 1;
-   int sock;
-
-   // epoll mask that contain the list of epoll events attached to a network socket
-   static struct epoll_event Edgvent; 
-   if(connect(sock,(struct sockaddr *)target, sizeof(struct sockaddr)) == -1 && errno != EINPROGRESS)
-   {
-      // connect doesn't work, are we running out of available ports ? if yes, destruct the socket
-      if (errno == EAGAIN)
-      {
-         perror("connect is EAGAIN");
-         close(sock);
-         exit(1);
-      }
-   }
-   else
-   {
-     Edgvent.events =  EPOLLOUT | EPOLLRDHUP | EPOLLERR | EPOLLET ;     
-     Edgvent.data.fd = sock;     
-     // add the socket to the epoll file descriptors
-     if(epoll_ctl(epfd, EPOLL_CTL_ADD, sock, &Edgvent) != 0)
-       {
-         perror("epoll_ctl, adding socket\n");
-         exit(1);
-       }
-   }   
-   return 0;
-}
 #endif
