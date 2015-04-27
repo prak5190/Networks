@@ -97,19 +97,22 @@ char* createBitfieldMessage(bt_args_t *bt_args,int &length1) {
     getPacketFile (name,data, i * piece_length,off , false);
     fileSize -= off;
     char id[20];
-    calc_sha(data,off,id);  
+    calc_sha(data,off,id);            
     bool flag = true;
     for (int m = 0; m < 20 ; m++) {
-      if ((char)pieces[i][m] != (char)id[i]) {
+      if ((unsigned short)pieces[i][m] != (unsigned short)id[m]) {
         flag = false;
         break;
       }
     }
-    if (strncmp(id,pieces[i],20) == 0) {  
+    // if (strncmp(id,pieces[i],20) == 0) {  
+    if (flag) {
+      // std::cout << "Bitfield Matched for piecce " << i << std::endl;      
       bitfield[k] = (unsigned char) ((1 << (7-(i%8)))  + bitfield[k]);      
     } else {
       //bitfield[k] = (unsigned char) ((1 << 7-(i%8))  + bitfield[k]);  
       // -1 indicates piece doesn't exist - Now populate this with sockets attempting to download it      
+      // std::cout << "Bitfield Failed for piecce " << i << std::endl;
       if (piece_to_socket_map.find(i) == piece_to_socket_map.end()) {
         piece_to_socket_map.insert(std::make_pair(i,-1));
       }

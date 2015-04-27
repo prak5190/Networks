@@ -41,6 +41,7 @@ void copyString(char*data,int &n ,char* str,int size) {
 struct BItem
 {
   long* val;
+  char* strVal;
   long numVal;
   int type; // 0 - Str , 1 - Num , 2 - dict , 3 -list
   size_t size;
@@ -68,6 +69,12 @@ string parseDict(std::unordered_map<std::string,BItem> &map,char* data, int &n,s
       bzero(str,size+1);
       str[size] = '\0';
       copyString(data,n,str,size);
+      
+      // std::cout << "String size is " << size << std::endl;
+      // for (int q = 0 ; q < size ; q++)
+      //   std::cout <<(unsigned short) str[q]<< " " ;
+      // std::cout << std::endl;
+
       if (log_if(3))
         std::cout << "String : "<< str << std::endl;
       if (isKey) {
@@ -114,6 +121,7 @@ string parseDict(std::unordered_map<std::string,BItem> &map,char* data, int &n,s
         if(log_if(3.5))
           std::cout << str << std::endl;
         temp.val = (long*)str;
+        temp.strVal = (char*)str;
         map.insert(std::make_pair(key,temp));
         break;
       case 1: 
@@ -177,7 +185,7 @@ void populateInfo(std::unordered_map<std::string,BItem> fmap , bt_info_t* t) {
   char **arr = new char*[num];
   for (int i = 0;i< num ; i++) {
     arr[i] = new char[20];
-    memcpy(arr[i] , temp.val + (i*20) , 20);
+    memcpy(arr[i] , temp.strVal + (i*20) , 20);
   }
   t->num_pieces = num; 
   t->piece_hashes = arr;
