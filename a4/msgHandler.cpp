@@ -114,14 +114,21 @@ char* createBitfieldMessage(bt_args_t *bt_args,int &length1) {
         piece_to_socket_map.insert(std::make_pair(i,-1));
       }
     }
-  }   
+  }
+  if (log_if(4.4)) {
+    std::cout << "Init: BitString ";
+    for(int i = 0; i < num_pieces ; i++) {
+      std::cout << ( ((unsigned char)bitfield[k]) >> (7 - (i%8)));
+    }
+    std::cout <<  std::endl;
+  }
+
   closeFile(name);
   // The serialization of the message -
   msg.payload.bitfiled.size = sizeof (bitfield);
   msg.length = sizeof(bitfield);
-  char *message= new char[msg.length];
-  memcpy(message + sizeof(msg), bitfield , sizeof(bitfield));
-  //msg.payload.bitfiled.bitfield = &message[sizeof(msg)];
+  char *message= new char[sizeof(msg) + msg.length];
+  memcpy(message + sizeof(msg), bitfield , sizeof(bitfield));  
   memcpy(message,(char*) &msg,sizeof(msg));  
   length1 = msg.length;
   // Set it in args

@@ -199,7 +199,7 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
       memcpy((char*)&msg , buf , sizeof(bt_msg_t));
       if (log_if(4.2)) {
         std::cout << "\nR: Data - Type : " << msg.bt_type << " Size : " << msg.length << std::endl; 
-      }    
+      }
       // Now use the type to parse message 
       switch(msg.bt_type) {
       case BT_HAVE: {
@@ -291,8 +291,8 @@ void* initHandshake (void* args) {
           continue;
         } else {
           int dc =  sendHandshakeMsg(bt_args,events[i].data.fd);
-          sendBitFieldMessage(bt_args,events[i].data.fd);
-          if (dc < 0) {
+          int mc = sendBitFieldMessage(bt_args,events[i].data.fd);
+          if (dc < 0 || mc < 0) {
             std::cout << "SE: Handshake send failed" << std::endl;
             abort();
           } else {

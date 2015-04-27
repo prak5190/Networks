@@ -133,7 +133,6 @@ int get_and_bind_socket(bt_args_t *bt_args) {
       int k  = listen(s, MAX_CONNECTIONS);
       if (k < 0) {
         std::cout << "Unable to listen " << std::endl;
-        sleep(10);
         abort();
       } 
       return s;
@@ -263,7 +262,7 @@ void  __npoll__(int sfd,int (*cb)(bt_args_t*, vector<char>,int),int (*cb2)(bt_ar
          // I am a seeder now
          closeFile(string(bt_args->save_file));
          std::cout << "Download finished - Will Seed now" << std::endl;
-         sleep(10);
+         sleep(4);
        }
      }
      // Send request for pieces which ever are required
