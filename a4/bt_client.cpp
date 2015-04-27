@@ -85,12 +85,14 @@ int main (int argc, char * argv[]){
   }
   
   if (rth != 0) {
-    std::cout << "joining reci thread " << std::endl;
+    if(log_if(4.4))
+      std::cout << "joining reci thread " << std::endl;
     pthread_join(rth,NULL);  
   }
 
   if (sth != 0) {
-    std::cout << "joining send  thread " << std::endl;
+    if(log_if(4.4))
+      std::cout << "joining send  thread " << std::endl;
     pthread_join(sth,NULL);
   } 
   return 0;

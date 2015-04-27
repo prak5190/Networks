@@ -233,6 +233,10 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
       }
       // Now use the type to parse message 
       switch(msg.bt_type) {
+      case BT_INTERSTED : {
+        std::set<int> temp;
+        socket_to_piecelist_map.insert(std::make_pair(s,temp));
+      }break;
       case BT_HAVE: {
         int addedPiece = msg.payload.have;
         // Add to the map 
@@ -292,7 +296,8 @@ void* initHandshake (void* args) {
     abort();
   }
   //sleep(2);
-  std::cout << "S: Start Init Handshake" << std::endl;
+  if(log_if(4.8))
+    std::cout << "S: Start Init Handshake" << std::endl;
   for (port = INIT_PORT; port < MAX_PORT ; port++) {
     if (port != ownPort && (url_to_socket_map.find("localhost:" + std::to_string(port)) == url_to_socket_map.end())) {
       sockaddr_in serv_addr;
@@ -317,8 +322,10 @@ void* initHandshake (void* args) {
   int n,i;
   while(1) {
     n = epoll_wait (efd,events,MAXEVENTS,1000);
-    if (n > 0)  
-      std::cout << "S: Got "<< n << " events for "<< sfd << std::endl;
+    if (n > 0) { 
+      if(log_if(4.3))
+        std::cout << "S: Got "<< n << " events for "<< sfd << std::endl;
+    }
     for (i=0;i<n;i++) {      
       if ((events[i].events & EPOLLERR) ||
           (events[i].events & EPOLLHUP)) {
@@ -327,18 +334,21 @@ void* initHandshake (void* args) {
       } else { 
         // verify the socket is connected and doesn't return an error
         if(socket_check(events[i].data.fd) != 0) {
-          std::cout << "SE : Write Handshake error " << std::endl;
+          if(log_if(5))
+            std::cout << "SE : Write Handshake error " << std::endl;
           continue;
         } else {
           int dc =  sendHandshakeMsg(bt_args,events[i].data.fd);
           int mc = sendBitFieldMessage(bt_args,events[i].data.fd);
           if (dc < 0 || mc < 0) {
+            if(log_if(5))
             std::cout << "SE: Handshake send failed" << std::endl;
             abort();
           } else {
 
             //handshake_socket_set.insert(events[i].data.fd);
-            std::cout << "SE : Hanshake Success " << std::endl;
+            if(log_if(4.3))
+              std::cout << "SE : Hanshake Success " << std::endl;
             event_mask.events = EPOLLIN | EPOLLRDHUP | EPOLLERR | EPOLLET;
             event_mask.data.fd = events[i].data.fd;                        
             if(epoll_ctl(receiver_efd, EPOLL_CTL_ADD, events[i].data.fd, &event_mask) != 0) {
@@ -358,7 +368,8 @@ void* createReciever (void* args) {
   thread_args *t = (thread_args*) args;
   int sockfd = t->s;  
   bt_args_t *bt_args = t->bt_args;
-  std::cout << "Polling " << sockfd << std::endl;  
+  if(log_if(4.3))
+    std::cout << "Polling " << sockfd << std::endl;  
   while (1) {
     __npoll__(sockfd,handleData,sendRequestForPieces,bt_args);
     // Pass this data to handler thread

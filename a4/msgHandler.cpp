@@ -177,7 +177,7 @@ int sendRequestForPieces(bt_args_t *bt_args,int s) {
   auto it1 = socket_to_piecelist_map.find(s);
   int requ = 0;
   if (piece_to_socket_map.size() == 0) {
-    if(log_if(5))
+    if(log_if(4.8))
       std::cout << "S: Currently Seeding " << std::endl;
     return 1;
   }

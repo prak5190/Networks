@@ -19,7 +19,7 @@ function create_peer(name , save_file,torrentFile,port) {
     peerStr = " -p localhost:"+port + " " ;
   if (save_file)
     saveStr = " -s "+save_file + " ";
-  var command = "./bt_client -v 4.2"+ peerStr + saveStr + torrentFile + " > ~/" + name + ".log";
+  var command = "./bt_client -v 5"+ peerStr + saveStr + torrentFile + " > ~/" + name + ".log";
   // var command = "./bt_client -v 4.2"+ peerStr + saveStr + "download.mp3.torrent > ~/" + name + ".log";
   console.log("COmmand " ,command);
   return child_process.exec(command, function (error, stdout, stderr) {
