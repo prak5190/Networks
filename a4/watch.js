@@ -12,14 +12,15 @@ function make() {
   }
 }
 
-function create_peer(name , save_file,port) {
+function create_peer(name , save_file,torrentFile,port) {
   var peerStr = "";
   var saveStr = "";
   if (port) 
     peerStr = " -p localhost:"+port + " " ;
   if (save_file)
     saveStr = " -s "+save_file + " ";
-  var command = "./bt_client -v 4.2"+ peerStr + saveStr + "moby_dick.txt.torrent > ~/" + name + ".log";
+  var command = "./bt_client -v 4.2"+ peerStr + saveStr + torrentFile + " > ~/" + name + ".log";
+  // var command = "./bt_client -v 4.2"+ peerStr + saveStr + "download.mp3.torrent > ~/" + name + ".log";
   console.log("COmmand " ,command);
   return child_process.exec(command, function (error, stdout, stderr) {
     //console.log('stdout: ' + stdout);
@@ -39,8 +40,10 @@ function run() {
   kill_all();
   if(make()) { 
     console.log("Triggering processes ");
-    create_peer("s1","s1-moby.txt");
-    create_peer("s2","s2-moby.txt");
+    // var torrentFile = "download.mp3.torrent";
+    var torrentFile = "moby_dick.txt.torrent";
+    create_peer("s1","s1-moby.txt",torrentFile);
+    create_peer("s2","s2-moby.txt",torrentFile);
   }
 }
 

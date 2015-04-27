@@ -92,11 +92,23 @@ void writeToFile(bt_args_t *bt_args, bt_msg_t *msg,int s) {
   if (remaining_size <= 0) {
     // Verify the integrity of piece 
     // If SHA matches 
-    if (true) {
+    // If SHA matches
+    char id[20];
+    char data[totalPieceLength];
+    getPacketFile (fs,data,index * piece_size,totalPieceLength,false);
+    calc_sha(data,totalPieceLength,id);
+    char *hash = bt_args->bt_info->piece_hashes[index];
+    bool flag = true;
+    for (int m = 0; m < 20 ; m++) {
+      if ((unsigned short)hash[m] != (unsigned short)id[m]) {
+        flag = false;
+        break;
+      }
+    }
+    if (flag) {
       piece_to_socket_map.erase(index);
       // Send a have 
-      completed_piece_to_socket_map.insert(std::make_pair(index,2));
-      
+      completed_piece_to_socket_map.insert(std::make_pair(index,2));      
     } else {
       //or else send a request for the starting piece       
       int len;
