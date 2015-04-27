@@ -257,7 +257,7 @@ void  __npoll__(int sfd,int (*cb)(bt_args_t*, vector<char>,int),int (*cb2)(bt_ar
        compCount++;
      }
      completed_piece_to_socket_map.clear();
-     if (piece_to_socketlist_map.size() == 0) {
+     if (piece_to_socket_map.size() == 0) {
        if (compCount > 0) {
          // I am a seeder now
          closeFile(string(bt_args->save_file));
