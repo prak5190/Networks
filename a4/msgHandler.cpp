@@ -11,8 +11,11 @@ bt_msg_t* parseBitField(const char* message,int length) {
 
 char* createRequestMessage(bt_args_t *bt_args,int &l1,int ind , int length , int begin) {
   // Return null message 
-  if (length > (1 << 15) || ind > bt_args->bt_info->num_pieces || begin > bt_args->bt_info->piece_length) 
-    return NULL;
+  // if (length > (1 << 15) || ind > bt_args->bt_info->num_pieces || begin > bt_args->bt_info->piece_length) {
+  //   std::cout << "Invalid request " << std::endl;
+  //   abort();
+  //   return NULL;
+  // }
   bt_msg_t msg;  
   msg.length = 0;
   msg.bt_type = BT_REQUEST;

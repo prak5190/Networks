@@ -92,7 +92,7 @@ void writeToFile(bt_args_t *bt_args, bt_msg_t *msg,int s) {
   if (remaining_size <= 0) {
     // Verify the integrity of piece 
     // If SHA matches 
-    if (1) {
+    if (true) {
       piece_to_socket_map.erase(index);
       // Send a have 
       completed_piece_to_socket_map.insert(std::make_pair(index,2));
@@ -102,6 +102,7 @@ void writeToFile(bt_args_t *bt_args, bt_msg_t *msg,int s) {
       int len;
       int blockSize = (1 << 15);
       blockSize = blockSize > totalPieceLength ? totalPieceLength : blockSize;
+      std::cout << "Sending request from start now for I:L:B" << index <<" - "<< blockSize<<" - " << 0 << std::endl;
       char *msg = createRequestMessage(bt_args,len,index,blockSize , 0);
       int n = send(s,msg,len,0);
       if (n < 0) {
@@ -113,6 +114,7 @@ void writeToFile(bt_args_t *bt_args, bt_msg_t *msg,int s) {
     int len;
     int blockSize = (1 << 15);
     blockSize = blockSize > remaining_size ? remaining_size : blockSize;
+    std::cout << "Sending request now for I:L:B" << index <<" - "<< blockSize<<" - " << begin+ length << std::endl;
     char *msg = createRequestMessage(bt_args,len,index,blockSize , begin + length);
     int n = send(s,msg,len,0);
     if (n < 0) {
@@ -217,12 +219,18 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
       }break; 
       case BT_REQUEST: {
         // msg already has reqyuired data - no need to reparse      
-        std::cout << "R: Got a request "  << std::endl;
+        std::cout << "R: Got a request - I:B:L " << msg.payload.request.index << " - " << msg.payload.request.begin << " - " << msg.payload.request.length  << std::endl;
+        //sleep(1);
         sendData(bt_args,s,msg.payload.request.length,msg.payload.request.index,msg.payload.request.begin);
       }break;
       case BT_PIECE: {
         bt_msg_t *m1 = parsePieceMessage(buf, msg.length);
-        writeToFile(bt_args,m1,s);
+        std::cout << "R: Got data - I:B:L " << msg.payload.piece.index << " - " << msg.payload.piece.begin << std::endl;
+        // Don't write if already written to
+        if (piece_to_socket_map.find(msg.payload.piece.index) != piece_to_socket_map.end()) {
+          writeToFile(bt_args,m1,s);
+          //sleep(1);
+        }
         // if (log_if(2.4))
         //   std::cout << "R: Piece message "<< m1->payload.piece.piece << std::endl;
         
