@@ -55,6 +55,12 @@ bt_args_t *bt_args = new bt_args_t();
 int main (int argc, char * argv[]){  
   parseCmdArgs(bt_args,argc,argv);   
   parseTorrentFile(bt_args);
+  // Ensure save file is of correct size
+  string fname = string(bt_args->save_file);
+  long size = getFileSize(fname);
+  if (size < bt_args->bt_info->length)
+    createFile(fname, bt_args->bt_info->length);
+
   int length;
   // Populate bit field and maps
   createBitfieldMessage(bt_args,length);
@@ -66,7 +72,7 @@ int main (int argc, char * argv[]){
   }
   err = listen(s,SOMAXCONN);
   if (err ==-1) {
-    std::cout << "Unable to listen " << std::endl;
+    std::cout << "Unable to listen " << std::endl;    
     abort();
   }
 

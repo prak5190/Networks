@@ -60,6 +60,11 @@ int assembleFile (string name,int start, char* data , long size , bool isLast) {
   }
   return 0;
 };
+int createFile(string name,long size) {
+  char data[1];
+  assembleFile (name,size-1,data,1,true);
+  return 0;
+};
 
 std::unordered_map<string,FILE*> RFileDescriptorMap;
 long getFileSize(string name) {
@@ -88,7 +93,7 @@ int getPacketFile (string name,char *data, int start, long offset, bool isLast) 
     fd = search->second;
   } else {
     // Open the file -- Create if not present
-    fd = std::fopen(name.c_str(), "wb+");
+    fd = std::fopen(name.c_str(), "rb");
     RFileDescriptorMap.insert(std::make_pair(name , fd));
   }
   if (start != -1 || ftell(fd) != start) {

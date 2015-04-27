@@ -73,8 +73,8 @@ using std::vector;
 // #include "timeutil.cpp"
 #include "bt_lib.cpp"
 #include "fileHandler.cpp" 
+#include "msgHandler.cpp"
 #include "socketHelpers.cpp"
 #include "bencode.cpp"
-#include "msgHandler.cpp"
 #endif
 
