@@ -110,7 +110,8 @@ int get_and_bind_socket2(bt_args_t *bt_args) {
   while (port < MAX_PORT) {
     s = create_and_bind(port);
     if (s > 0) {
-      std::cout << "Bound to Port " << port << std::endl;
+      if (log_if(5))
+        std::cout << "Bound to Port " << port << std::endl;
       bt_args->port = port;
       port = MAX_PORT;
       break;
@@ -128,10 +129,11 @@ int get_and_bind_socket(bt_args_t *bt_args) {
     if(bindSocket(port,s) <= -1)
       port++;
     else {
-      std::cout << "Bound to port " << port << std::endl;
+      if(log_if(5))
+        std::cout << "Bound to port " << port << std::endl;
       bt_args->port = port;  
       int k  = listen(s, MAX_CONNECTIONS);
-      if (k < 0) {
+      if (k < 0) {        
         std::cout << "Unable to listen " << std::endl;
         abort();
       } 
@@ -188,90 +190,96 @@ void  __npoll__(int sfd,int (*cb)(bt_args_t*, vector<char>,int),int (*cb2)(bt_ar
   char buf[BUFFER_SIZE];
   while(1) {
     n = epoll_wait (efd,events,MAXEVENTS,1000);
-    if (n > 0) 
-      std::cout << "R: Got "<< n << " events for "<< sfd << std::endl;
-     for (i=0;i<n;i++) {
-          if ((events[i].events & EPOLLERR) ||
-                (events[i].events & EPOLLHUP) ||
-              (!(events[i].events & EPOLLIN))) {
-            std::cout << events[i].events << std::endl;
-            std::cout << "RE : Error receiving " << std::endl;
-          } else if (sfd == events[i].data.fd) {
-            while (1) {
-              struct sockaddr in_addr;
-              socklen_t in_len;
-              int infd;
-              char hbuf[NI_MAXHOST],sbuf[NI_MAXSERV];
-              in_len = sizeof in_addr;
-              infd = accept(sfd,&in_addr,&in_len);
-              if (infd==-1) {
-                if((errno==EAGAIN) || (errno == EWOULDBLOCK)) { 
-                  break;
-                } else {
-                  std::cout << "RE: Accept Error " << std::endl;
-                  break;
-                }
-              }
-              s = getnameinfo(&in_addr,in_len,hbuf,sizeof hbuf, sbuf,sizeof sbuf, NI_NUMERICHOST | NI_NUMERICSERV);
-              url_to_socket_map.insert(std::make_pair("localhost"+ string(sbuf),infd));
-              if (s==0) {
-                printf("accepted connection on descriptor %d (host=%s, port=%s)\n",infd,hbuf,sbuf);
-              }
-              s = make_socket_non_blocking(infd);
-              if (s==-1) {
-                abort();
-              }
-              event.data.fd = infd;
-              event.events = EPOLLIN | EPOLLET;
-              s = epoll_ctl(efd,EPOLL_CTL_ADD,infd,&event);
-              if (s==-1) {
-                perror("epoll_ctl");
-                abort();
-              }
-            }            
-          } else {
-            vector<char> finalStr;
-            finalStr.clear();
-            while (1) {
-              memset(buf , 0x00 , sizeof(buf));
-              ssize_t count; 
-              count = recv(events[i].data.fd, buf, BUFFER_SIZE , 0);
-              if (count < 0)
-                break;
-              for (int ii = 0; ii < count; ii++) {
-                finalStr.insert(finalStr.end(),buf[ii]);
-              }
-            }                        
-            std::cout << "R: Recieved Data " << finalStr.size();
-            // for (auto it = finalStr.begin(); it != finalStr.end(); ++it) {
-            //   std::cout<<*it;
-            // }
-            std::cout<< std::endl;
-            cb(bt_args,finalStr,events[i].data.fd);
+    if (n > 0) {
+      if(log_if(4.3))
+        std::cout << "R: Got "<< n << " events for "<< sfd << std::endl;
+    }
+    for (i=0;i<n;i++) {
+      if ((events[i].events & EPOLLERR) ||
+          (events[i].events & EPOLLHUP) ||
+          (!(events[i].events & EPOLLIN))) {
+        std::cout << events[i].events << std::endl;
+        std::cout << "RE : Error receiving " << std::endl;
+        std::cout << "Socket disconnected " << std::endl;
+        sleep(100);
+      } else if (sfd == events[i].data.fd) {
+        while (1) {
+          struct sockaddr in_addr;
+          socklen_t in_len;
+          int infd;
+          char hbuf[NI_MAXHOST],sbuf[NI_MAXSERV];
+          in_len = sizeof in_addr;
+          infd = accept(sfd,&in_addr,&in_len);
+          if (infd==-1) {
+            if((errno==EAGAIN) || (errno == EWOULDBLOCK)) { 
+              break;
+            } else {
+              std::cout << "RE: Accept Error " << std::endl;
+              break;
+            }
           }
-     }
-     // Send out haves for pieces which have just completed 
-     int compCount = 0, remCount = 0;
-     for (auto it = completed_piece_to_socket_map.begin(); it != completed_piece_to_socket_map.end(); ++it) {
-       sendHave(bt_args, it->first,it->second);
-       compCount++;
-     }
-     completed_piece_to_socket_map.clear();
-     if (piece_to_socket_map.size() == 0) {
-       if (compCount > 0) {
-         // I am a seeder now
-         closeFile(string(bt_args->save_file));
-         std::cout << "Download finished - Will Seed now" << std::endl;
-         sleep(4);
-       }
-     }
-     // Send request for pieces which ever are required
-     for (auto it = socket_to_piecelist_map.begin(); it != socket_to_piecelist_map.end(); ++it) {
-       int s = it->first;
-       remCount++;
-       cb2(bt_args,s);
-     }
-     
+          s = getnameinfo(&in_addr,in_len,hbuf,sizeof hbuf, sbuf,sizeof sbuf, NI_NUMERICHOST | NI_NUMERICSERV);
+          url_to_socket_map.insert(std::make_pair("localhost"+ string(sbuf),infd));
+          if (s==0) {
+            printf("accepted connection on descriptor %d (host=%s, port=%s)\n",infd,hbuf,sbuf);
+          }
+          s = make_socket_non_blocking(infd);
+          if (s==-1) {
+            abort();
+          }
+          event.data.fd = infd;
+          event.events = EPOLLIN | EPOLLET;
+          s = epoll_ctl(efd,EPOLL_CTL_ADD,infd,&event);
+          if (s==-1) {
+            perror("epoll_ctl");
+            abort();
+          }
+        }            
+      } else {
+        vector<char> finalStr;
+        finalStr.clear();
+        while (1) {
+          memset(buf , 0x00 , sizeof(buf));
+          ssize_t count; 
+          count = recv(events[i].data.fd, buf, BUFFER_SIZE , 0);
+          if (count < 0)
+            break;
+          for (int ii = 0; ii < count; ii++) {
+            finalStr.insert(finalStr.end(),buf[ii]);
+          }
+        }        
+        if(log_if(4.3)) {
+          std::cout << "R: Recieved Data " << finalStr.size();
+        // for (auto it = finalStr.begin(); it != finalStr.end(); ++it) {
+        //   std::cout<<*it;
+        // }
+          std::cout<< std::endl;
+        }
+        cb(bt_args,finalStr,events[i].data.fd);
+      }
+    }
+    // Send out haves for pieces which have just completed 
+    int compCount = 0, remCount = 0;
+    for (auto it = completed_piece_to_socket_map.begin(); it != completed_piece_to_socket_map.end(); ++it) {
+      sendHave(bt_args, it->first,it->second);
+      compCount++;
+    }
+    completed_piece_to_socket_map.clear();
+    if (piece_to_socket_map.size() == 0) {
+      if (compCount > 0) {
+        // I am a seeder now
+        closeFile(string(bt_args->save_file));
+        if(log_if(5))
+          std::cout << "Download finished - Will Seed now" << std::endl;
+        sleep(4);
+      }
+    }
+    // Send request for pieces which ever are required
+    for (auto it = socket_to_piecelist_map.begin(); it != socket_to_piecelist_map.end(); ++it) {
+      int s = it->first;
+      remCount++;
+      cb2(bt_args,s);
+    }     
   }
 }
 
@@ -286,8 +294,8 @@ int getSocketPort(int s) {
 }
 
 /* create a TCP socket with non blocking options and connect it to the target
-* if succeed, add the socket in the epoll list and exit with 0
-*/
+ * if succeed, add the socket in the epoll list and exit with 0
+ */
 int create_and_connect( sockaddr_in* target , int epfd , int port)
 {
    int yes = 1;

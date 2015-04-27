@@ -117,11 +117,13 @@ void writeToFile(bt_args_t *bt_args, bt_msg_t *msg,int s) {
       int len;
       int blockSize = (1 << 15);
       blockSize = blockSize > totalPieceLength ? totalPieceLength : blockSize;
-      std::cout << "Sending request from start now for I:L:B" << index <<" - "<< blockSize<<" - " << 0 << std::endl;
+      if(log_if(4.3))
+        std::cout << "Sending request from start now for I:L:B" << index <<" - "<< blockSize<<" - " << 0 << std::endl;
       char *msg = createRequestMessage(bt_args,len,index,blockSize , 0);
       int n = send(s,msg,len,0);
       if (n < 0) {
-        std::cout << "R: Send Create request failed" << std::endl;
+        if(log_if(4.3))
+          std::cout << "R: Send Create request failed" << std::endl;
       }
     }
   } else {
@@ -129,7 +131,8 @@ void writeToFile(bt_args_t *bt_args, bt_msg_t *msg,int s) {
     int len;
     int blockSize = (1 << 15);
     blockSize = blockSize > remaining_size ? remaining_size : blockSize;
-    std::cout << "Sending request now for I:L:B" << index <<" - "<< blockSize<<" - " << begin+ length << std::endl;
+    if(log_if(4.3))
+      std::cout << "Sending request now for I:L:B" << index <<" - "<< blockSize<<" - " << begin+ length << std::endl;
     char *msg = createRequestMessage(bt_args,len,index,blockSize , begin + length);
     int n = send(s,msg,len,0);
     if (n < 0) {
@@ -169,7 +172,8 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
       if (totalSize >= sizeof (bt_msg_t)) {
         bt_msg_t t;
         memcpy((char*)&t, buf, sizeof(bt_msg_t));
-        std::cout << "Length from msg is "<< t.length << std::endl;
+        if(log_if(3.3))
+          std::cout << "Length from msg is "<< t.length << std::endl;
         sze = t.length + sizeof(t);
         done = 0;
       } else {        
@@ -194,7 +198,8 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
         oldData.insert(oldData.end(),*start);
         start++;
       }
-      std::cout << "Breaking " << done <<  " " << totalSize << " "<<sze<< std::endl;
+      if(log_if(3.3))
+        std::cout << "Breaking " << done <<  " " << totalSize << " "<<sze<< std::endl;
       break;
     }
     
@@ -205,7 +210,8 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
       handshake_msg_t hmsg;
       hmsg.parse(buf);
       //bt_args->bitfieldMsg
-      std::cout << "R: Peer Id " <<  hmsg.peerId << std::endl;    
+      if(log_if(4.9))
+        std::cout << "R: Peer Id " <<  hmsg.peerId << std::endl;
       // int port = getSocketPort(s);
       // if (port != -1) {
       //   if (url_to_socket_map.find(string("localhost:") +std::to_string(port)) == url_to_socket_map.end()) {

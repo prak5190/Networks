@@ -25,7 +25,8 @@ char* createRequestMessage(bt_args_t *bt_args,int &l1,int ind , int length , int
   char *message = new char[sizeof(bt_msg_t)];
   l1 =  sizeof(bt_msg_t);  
   memcpy(message,(char*)&msg,sizeof(bt_msg_t));
-  std::cout << "Requesting I:L:B" << ind << " - " << length << " - " << begin << std::endl;
+  if(log_if(4.4))
+    std::cout << "Requesting I:L:B" << ind << " - " << length << " - " << begin << std::endl;
   return message;   
 };
 
@@ -112,13 +113,10 @@ char* createBitfieldMessage(bt_args_t *bt_args,int &length1) {
     }
     // if (strncmp(id,pieces[i],20) == 0) {  
     if (flag) {
-      // std::cout << "Bitfield Matched for piecce " << i << std::endl;      
       bitfield[k] = (unsigned char) ((1 << (7-(i%8)))  + bitfield[k]);      
       piece_begin_map.insert(std::make_pair(i,off));
     } else {
-      //bitfield[k] = (unsigned char) ((1 << 7-(i%8))  + bitfield[k]);  
       // -1 indicates piece doesn't exist - Now populate this with sockets attempting to download it      
-      // std::cout << "Bitfield Failed for piecce " << i << std::endl;
       if (piece_to_socket_map.find(i) == piece_to_socket_map.end()) {
         piece_to_socket_map.insert(std::make_pair(i,-1));
       }
@@ -179,21 +177,25 @@ int sendRequestForPieces(bt_args_t *bt_args,int s) {
   auto it1 = socket_to_piecelist_map.find(s);
   int requ = 0;
   if (piece_to_socket_map.size() == 0) {
-    std::cout << "S: Am a seeder - No need to send a request " << std::endl;
+    if(log_if(5))
+      std::cout << "S: Currently Seeding " << std::endl;
     return 1;
   }
   long file_size = bt_args->bt_info->length;
   long num_pieces = bt_args->bt_info->num_pieces;
   long piece_size = bt_args->bt_info->piece_length;
   long last_piece_size = file_size % piece_size;  
-  std::cout << "S: Pieces available in socket " << s << " : " << it1->second.size() << std::endl;
+  if(log_if(4.4))
+    std::cout << "S: NUmber of Pieces available in socket " << s << " : " << it1->second.size() << std::endl;
   for (auto it = piece_to_socket_map.begin(); it != piece_to_socket_map.end(); ++it) {
-    std::cout << "Required piece " << it->first << std::endl;;
+    if(log_if(4.2))
+      std::cout << "Required piece " << it->first << std::endl;;
   }
   for (auto it = it1->second.begin(); it != it1->second.end(); ++it) {
     int length = 0;
     int piece = *it;
-    std::cout << "S: Piece Available is " << piece << std::endl;
+    if(log_if(3.4))
+      std::cout << "S: Piece Available is " << piece << std::endl;
     // If piece is not in file - it will exist in map
     auto it2 = piece_to_socket_map.find(piece);
     if (it2 != piece_to_socket_map.end()){      
@@ -215,15 +217,19 @@ int sendRequestForPieces(bt_args_t *bt_args,int s) {
         it2->second = s;
         //piece_to_socket_map.insert(std::make_pair(piece,s));
         if (n > 0){
-          std::cout << "S: Sending request *********************"<< s << "    " << std::endl;       
+          if(log_if(4.4))
+          std::cout << "S: Sending request to the socket : "<< s << "    " << std::endl;       
         } else {
-          std::cout << "SE: Failed " << strerror(errno) << std::endl;
+          if(log_if(4.9))
+            std::cout << "SE: Failed " << strerror(errno) << std::endl;
         }
       }
     }
   }
-  if (requ == 0) 
-    std::cout << "S: No Useful data found from socket "<< s << std::endl;
+  if (requ == 0) {
+    if(log_if(4.3))
+      std::cout << "S: No Useful data found from socket "<< s << std::endl;
+  }
   return 0;
 }
 
@@ -234,9 +240,11 @@ int sendHandshakeMsg(bt_args_t *bt_args, int s) {
   msg.setData(bt_args->bt_info->info_hash,string(id));
   char message[sizeof(msg)];  
   memcpy(message , (char*) &msg , sizeof(handshake_msg_t));
-  std::cout << "HAND: Sending Message "<<sizeof(handshake_msg_t)  << std::endl;
+  if(log_if(4.8))
+    std::cout << "HAND: Sending Message "<<sizeof(handshake_msg_t)  << std::endl;
   k.parse(message);
-  std::cout << "HAND: Parse ID " << k.peerId << std::endl;
+  if(log_if(4.8))
+    std::cout << "HAND: Parse ID " << k.peerId << std::endl;
   int n = send(s,message,sizeof(handshake_msg_t),0);
   if (n >= 0) {
     registerSocket(s);

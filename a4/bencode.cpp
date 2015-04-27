@@ -96,7 +96,6 @@ string parseDict(std::unordered_map<std::string,BItem> &map,char* data, int &n,s
         dictItem.size= dictStr.length();
         dictItem.type = 0;
         dictItem.val = (long*)(dictStr.c_str());
-        std::cout << "Inserting prefix " << prefix << std::endl;
         map.insert(std::make_pair(newPrefix,dictItem));
       }
       type = 2;n++;
@@ -146,7 +145,6 @@ string parseDict(std::unordered_map<std::string,BItem> &map,char* data, int &n,s
   char str1[n-start+1];
   memcpy(str1, &data[start] , n-start);
   str1[n-start] = '\0'; 
-  // std::cout << "############ " << str1 << std::endl;
   return (string("d") + string(str1) + "e");
 }
 
