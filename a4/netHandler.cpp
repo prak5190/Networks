@@ -80,14 +80,17 @@ void writeToFile(bt_args_t *bt_args, bt_msg_t *msg,int s) {
   int totalPieceLength = pl;
   int length = msg->length;
   int index = msg->payload.piece.index;  
+  // Has already been download or already present - rogue present message
+  if (piece_to_socket_map.find(index) == piece_to_socket_map.end())
+    return;
   if (index == num_pieces - 1) 
     totalPieceLength = last_piece_size;
   char* piece = msg->payload.piece.piece;
   int begin = msg->payload.piece.begin;
   // Calcalate start 
   long start = (index * pl) + begin;
-    
-  assembleFile (fs,start, piece , length , false);  
+  
+  assembleFile (fs,start, piece , length , true);  
   long remaining_size = totalPieceLength - (begin + length);
   if (remaining_size <= 0) {
     // Verify the integrity of piece 
@@ -147,22 +150,26 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
     cbType = 1;     
   }
   int done = -1;
-  if (log_if (3.3))
-    std::cout << "R: Vector Size  : "<< vbuf.size() << std::endl;
-  int totalSize = vbuf.size();
+  if (log_if (4.3))
+    std::cout << "R: Vector Size  : "<< vbuf.size() << std::endl;  
+  size_t totalSize = vbuf.size();
   while(1) {
     buf = start;
     // Just validate copy part of data required
     int sze = 0;
+    if (buf[0] == 19)
+      cbType = 0;
+    else
+      cbType = 1;
     switch(cbType) {      
     case 0 : {
       sze = sizeof(handshake_msg_t);      
     }break;
     case 1: {
-      if ((unsigned int)totalSize > sizeof (bt_msg_t)) {
+      if (totalSize >= sizeof (bt_msg_t)) {
         bt_msg_t t;
         memcpy((char*)&t, buf, sizeof(bt_msg_t));
-        std::cout << "R: Size is " << t.length << "  , Type :  "<< t.bt_type  << std::endl;
+        std::cout << "Length from msg is "<< t.length << std::endl;
         sze = t.length + sizeof(t);
         done = 0;
       } else {        
@@ -171,14 +178,15 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
       }
     }break;  
     default: {
-      std::cout << "R: Buffer Overflow - SOme error  " << std::endl;
+       if (log_if(4.3))
+         std::cout << "R: Buffer Overflow - SOme error  " << std::endl;
       // Do something with the data    
     }break;
     }
     if (done <= 0 && totalSize >= sze) {
-        totalSize -= sze;
-        start += sze;
-        oldData.clear();
+      totalSize -= sze;
+      start += sze;
+      oldData.clear();      
     } else {
       // Store data in temp var 
       oldData.clear();
@@ -186,7 +194,7 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
         oldData.insert(oldData.end(),*start);
         start++;
       }
-      done = 1;
+      std::cout << "Breaking " << done <<  " " << totalSize << " "<<sze<< std::endl;
       break;
     }
     
@@ -205,8 +213,10 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
       //     url_to_socket_map.insert(std::make_pair(string("localhost:")+std::to_string(port), s));
       //   }
       // }
-      int hc = sendHandshakeMsg(bt_args,s);
       int mc = sendBitFieldMessage(bt_args,s);      
+      if(socket_to_piecelist_map.find(s) == socket_to_piecelist_map.end()) {
+        sendHandshakeMsg(bt_args,s);
+      }
     }break;
     case 1: {
       bt_msg_t msg;
@@ -231,18 +241,21 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
       }break; 
       case BT_REQUEST: {
         // msg already has reqyuired data - no need to reparse      
-        std::cout << "R: Got a request - I:B:L " << msg.payload.request.index << " - " << msg.payload.request.begin << " - " << msg.payload.request.length  << std::endl;
+        if (log_if(4.3))
+          std::cout << "R: Got a request - I:B:L " << msg.payload.request.index << " - " << msg.payload.request.begin << " - " << msg.payload.request.length  << std::endl;
         //sleep(1);
         sendData(bt_args,s,msg.payload.request.length,msg.payload.request.index,msg.payload.request.begin);
       }break;
       case BT_PIECE: {
         bt_msg_t *m1 = parsePieceMessage(buf, msg.length);
-        std::cout << "R: Got data - I:B:L " << msg.payload.piece.index << " - " << msg.payload.piece.begin << std::endl;
+        if (log_if(4.3))
+          std::cout << "R: Got data - I:B:L " << msg.payload.piece.index << " - " << msg.payload.piece.begin << std::endl;
         // Don't write if already written to
         if (piece_to_socket_map.find(msg.payload.piece.index) != piece_to_socket_map.end()) {
           writeToFile(bt_args,m1,s);
           //sleep(1);
         }
+        // sleep(5);
         // if (log_if(2.4))
         //   std::cout << "R: Piece message "<< m1->payload.piece.piece << std::endl;
         
@@ -255,7 +268,7 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
       // Do something with the data    
     }break;
     }    
-    if (done)
+    if (done || totalSize <= 0)
       break;    
   }  
   return 0;
