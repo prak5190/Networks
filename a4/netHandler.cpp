@@ -184,14 +184,15 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
       hmsg.parse(buf);
       //bt_args->bitfieldMsg
       std::cout << "R: Peer Id " <<  hmsg.peerId << std::endl;    
-      int port = getSocketPort(s);
-      if (port != -1) {
-        if (url_to_socket_map.find(string("localhost:") +std::to_string(port)) == url_to_socket_map.end()) {
-          // send handshake
-          url_to_socket_map.insert(std::make_pair(string("localhost:")+std::to_string(port), s));
-          sendHandshakeMsg(bt_args,s);
-        }
-      }    
+      // int port = getSocketPort(s);
+      // if (port != -1) {
+      //   if (url_to_socket_map.find(string("localhost:") +std::to_string(port)) == url_to_socket_map.end()) {
+      //     // send handshake
+      //     url_to_socket_map.insert(std::make_pair(string("localhost:")+std::to_string(port), s));
+      //   }
+      // }
+      int hc = sendHandshakeMsg(bt_args,s);
+      int mc = sendBitFieldMessage(bt_args,s);      
     }break;
     case 1: {
       bt_msg_t msg;

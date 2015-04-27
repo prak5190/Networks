@@ -235,6 +235,7 @@ int sendBitFieldMessage(bt_args_t *bt_args , int s) {
   //bt_msg_t *mgs = parseBitField(m,length);
   if (n < 0) {
     std::cout << "S:Bitfield Message sending failed  "<< s << std::endl;
+    return -1;
   } 
   return 0;  
 }
