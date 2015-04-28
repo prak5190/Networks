@@ -114,13 +114,13 @@ char* createBitfieldMessage(bt_args_t *bt_args,int &length1) {
     // if (strncmp(id,pieces[i],20) == 0) {  
     if (flag) {
       bitfield[k] = (unsigned char) ((1 << (7-(i%8)))  + bitfield[k]);      
-      piece_begin_map.insert(std::make_pair(i,off));
+      // piece_begin_map.insert(std::make_pair(i,off));
     } else {
       // -1 indicates piece doesn't exist - Now populate this with sockets attempting to download it      
       if (piece_to_socket_map.find(i) == piece_to_socket_map.end()) {
         piece_to_socket_map.insert(std::make_pair(i,-1));
       }
-      piece_begin_map.insert(std::make_pair(i,0));
+      // piece_begin_map.insert(std::make_pair(i,0));
     }
   }
   if (log_if(4.4)) {
@@ -166,7 +166,8 @@ int sendData(bt_args_t *bt_args, int s, int length, int index, int begin) {
   memcpy(&message[sizeof(t)],data,length);
   int n = send(s,message,sizeof(message),0);
   if (n >= 0) {
-    std::cout << "S: Data Sent of length " << length  << std::endl;
+    if(log_if(4.3))
+      std::cout << "S: Data Sent of length " << length  << std::endl;
   } else {
     std::cout << "SE: Error sending piece " << std::endl;
     return -1;
