@@ -43,7 +43,9 @@ function run() {
     var torrentFile = "download.mp3.torrent";
     create_peer("s1","s1.mp3",torrentFile);
     create_peer("s2","s2.mp3",torrentFile);
-
+    for (var i = 3 ; i < 8 ; i++) {
+      create_peer("s"+i ,"s"+i+".mp3",torrentFile);
+    }
     // var torrentFile = "moby_dick.txt.torrent";
     // create_peer("s1","s1-moby.txt",torrentFile);
     // create_peer("s2","s2-moby.txt",torrentFile);

@@ -272,7 +272,7 @@ void  __npoll__(int sfd,int (*cb)(bt_args_t*, vector<char>,int),int (*cb2)(bt_ar
         // I am a seeder now
         closeFile(string(bt_args->save_file));
         if(log_if(5))
-          std::cout << "Download finished - Will Seed now" << std::endl;
+          std::cout << "\33[2K\rDownload finished \n";
         sleep(4);
       }
     }

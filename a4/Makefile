@@ -13,3 +13,6 @@ all:
 
 clean:
 	rm -rf $(BIN) 
+
+scl:
+	scl enable devtoolset-2 bash
