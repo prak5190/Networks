@@ -1,6 +1,9 @@
-
 var fs =  require('fs');
 var child_process = require("child_process");
+var runsync = require('runsync');
+if(!child_process.spawnSync) {
+  child_process.spawnSync = runsync.spawn;
+}
 function make() {
   child_process.spawnSync("make clean");
   var ret = child_process.spawnSync("make");

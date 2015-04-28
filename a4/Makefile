@@ -1,6 +1,6 @@
 CC=g++ -std=c++11
 CPFLAGS=-g -Wall
-LDFLAGS= -lcrypto -lpthread
+LDFLAGS= -lcrypto -lpthread -lrt
 
 # CPP_FILES := $(wildcard *.cpp)	
 # OBJ_FILES := $(addprefix ,$(notdir $(CPP_FILES:.cpp=.o)))
@@ -16,3 +16,5 @@ clean:
 
 scl:
 	scl enable devtoolset-2 bash
+node:
+	npm install runsync
