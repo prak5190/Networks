@@ -413,15 +413,35 @@ std::unordered_map<string,int> url_to_socket_map;
 std::set<int> handshake_socket_set;
 std::unordered_map<int,int> completed_piece_to_socket_map;
 std::unordered_map<int,int> piece_to_socket_map;
+std::unordered_map<int,int> piece_to_lastN_map;
+std::unordered_map<int,int> socket_to_lastN_map;
 
 // Both of these need to be in sync
 // Stores the socket to pieces it can download
 std::unordered_map<int,std::set<int>> socket_to_piecelist_map;
-std::unordered_map<int,int> piece_begin_map;
+
 // Stores the piece to sockets it can download
 std::unordered_map<int,std::set<int>> piece_to_socketlist_map;
-std::unordered_map<int,std::queue<qMem>> socket_to_data_q_map;
 
+
+double lastProgress=0 ;
+void printProgress(bt_args_t *args) {
+  // long size = args->bt_info->length;
+  long num_pieces = args->bt_info->num_pieces;
+  int pieces_left = piece_to_socket_map.size();
+  int num_sockets = socket_to_piecelist_map.size();
+  double progress = ((double)(num_pieces - pieces_left)/(double) num_pieces) * (double)100;  
+  
+  if (progress < 100.0) {
+    std::cout << "\33[2K\rProgress : "<< progress << "% | " << "Connections : " << num_sockets;
+  } else if (lastProgress < 100.0 && progress >= 100.0) {
+    std::cout << "\33[2K\rProgress : "<< progress << "% | " << "Download completed ";
+  } else 
+    std::cout << "\33[2K\rSeeding  ";
+  
+  lastProgress = progress;
+  std::cout.flush();  
+}
 int registerPiece(int s,int pieceIndex) {
   auto it = socket_to_piecelist_map.find(s);
   if (it == socket_to_piecelist_map.end()) {
@@ -447,8 +467,9 @@ int registerPiece(int s,int pieceIndex) {
   }  
   return 0;
 }
-int unregisterSocket(int s,int pieceIndex) {
+int unregisterSocket(int s) {
   // Delete the socket entry 
+  socket_to_lastN_map.erase(s);
   socket_to_piecelist_map.erase(s);
   // Not removing dummy sockets from pieces, Instead delete it when it is accessed  
   return 0;
@@ -464,6 +485,51 @@ int registerSocket(int s) {
 
 bool isSocketAlive(int s) {
   return socket_to_piecelist_map.find(s) == socket_to_piecelist_map.end() ? false : true;
+}
+
+int TIMER = 0;
+void renewPiece(int p) {
+  int n = TIMER;
+  auto it = piece_to_lastN_map.find(p);
+  if(it == piece_to_lastN_map.end())
+    piece_to_lastN_map.insert(std::make_pair(p,n));
+  else
+    it->second = n;
+}
+void renewSocket(int s) {
+  int n = TIMER;
+  auto it = socket_to_lastN_map.find(s);
+  if(it == socket_to_lastN_map.end())
+    socket_to_lastN_map.insert(std::make_pair(s,n));
+  else
+    it->second = n;
+}
+void checkAndKillPiece() {
+  int n = TIMER;
+  for (auto it = piece_to_lastN_map.begin(); it != piece_to_lastN_map.end(); ++it) {
+    int lastN = it->second; 
+    it->second = n;
+    int p = it->first;
+    if (piece_to_socket_map.find(p) == piece_to_socket_map.end()) {
+      // Already downloaded - just remove it 
+      piece_to_lastN_map.erase(p);
+      continue;
+    }
+    // More than 10 wait loops
+    if (n - lastN  > 10) {
+      // The socket is blacked out
+      int s = piece_to_socket_map.find(p)->second;
+      piece_to_socket_map.find(p)->second = -1;
+      // Kill socket too
+      if (socket_to_lastN_map.find(s) != socket_to_lastN_map.end()) {
+        if (n - socket_to_lastN_map.find(s)->second > 10) {
+          unregisterSocket(s);
+        }
+      } else {
+        unregisterSocket(s);
+      }
+    }
+  }
 }
 
 std::vector<char> oldData;
