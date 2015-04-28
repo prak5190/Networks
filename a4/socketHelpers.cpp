@@ -189,6 +189,7 @@ void  __npoll__(int sfd,int (*cb)(bt_args_t*, vector<char>,int),int (*cb2)(bt_ar
   int n,i;
   char buf[BUFFER_SIZE];
   while(1) {
+    printProgress(bt_args);
     n = epoll_wait (efd,events,MAXEVENTS,1000);
     if (n > 0) {
       if(log_if(4.3))
@@ -221,7 +222,8 @@ void  __npoll__(int sfd,int (*cb)(bt_args_t*, vector<char>,int),int (*cb2)(bt_ar
           s = getnameinfo(&in_addr,in_len,hbuf,sizeof hbuf, sbuf,sizeof sbuf, NI_NUMERICHOST | NI_NUMERICSERV);
           url_to_socket_map.insert(std::make_pair("localhost"+ string(sbuf),infd));
           if (s==0) {
-            printf("accepted connection on descriptor %d (host=%s, port=%s)\n",infd,hbuf,sbuf);
+            if (log_if(4.4))
+              printf("accepted connection on descriptor %d (host=%s, port=%s)\n",infd,hbuf,sbuf);
           }
           s = make_socket_non_blocking(infd);
           if (s==-1) {
