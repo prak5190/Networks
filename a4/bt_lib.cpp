@@ -426,6 +426,9 @@ std::unordered_map<int,std::set<int>> piece_to_socketlist_map;
 
 double lastProgress=0 ;
 int LastPrint = 0;
+int LastType = -1;
+int LastLength = -1;
+int LastSocket = -1 ;
 void printProgress(bt_args_t *args) {
   // long size = args->bt_info->length;
   long num_pieces = args->bt_info->num_pieces;
@@ -433,15 +436,18 @@ void printProgress(bt_args_t *args) {
   int num_sockets = socket_to_piecelist_map.size();
   double progress = ((double)(num_pieces - pieces_left)/(double) num_pieces) * (double)100;  
   string log;
+  string peerMessageInfo = "";
+  if (LastType != -1 && LastLength != -1 && LastSocket != -1) 
+    peerMessageInfo = string(" Last Message details - T : ") + std::to_string(LastType) + " L: " + std::to_string(LastLength) + " Sock: "+std::to_string(LastSocket);
   // print log to error console
   log = "[" + getTimeStamp("%F %T") + "] ";
   if (progress < 100.0) {
-    std::cout << "\33[2K\r"<< log <<"Progress : "<< progress << "% | " << "Connections : " << num_sockets;
+    std::cout << "\33[2K\r"<< log <<"Progress : "<< progress << "% | " << "Connections : " << num_sockets << peerMessageInfo;
   } else if (lastProgress < 100.0 && progress >= 100.0) {
-    std::cout << "\33[2K\r"<< log <<"Progress : "<< progress << "% | " << "Download completed ";
+    std::cout << "\33[2K\r"<< log <<"Progress : "<< progress << "% | " << "Download completed " << peerMessageInfo;
   } else {
     if (LastPrint % 10 == 0) 
-      std::cout << "\33[2K\r"<< log <<"Seeding  ";
+      std::cout << "\33[2K\r"<< log <<"Seeding  "<< peerMessageInfo;
     LastPrint++;
     if (LastPrint >= 101) 
       LastPrint = LastPrint % 100;

@@ -224,11 +224,17 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
       if(socket_to_piecelist_map.find(s) == socket_to_piecelist_map.end()) {
         sendHandshakeMsg(bt_args,s);
       }
+      LastType = 0;
+      LastLength = 0;
+      LastSocket = s;
     }break;
     case 1: {
       bt_msg_t msg;
       memset((char*)&msg,0x00,sizeof(msg));
       memcpy((char*)&msg , buf , sizeof(bt_msg_t));
+      LastType = msg.bt_type;
+      LastLength = msg.length;
+      LastSocket = s;
       if (log_if(4.2)) {
         std::cout << "\nR: Data - Type : " << msg.bt_type << " Size : " << msg.length << std::endl; 
       }
