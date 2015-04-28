@@ -425,19 +425,27 @@ std::unordered_map<int,std::set<int>> piece_to_socketlist_map;
 
 
 double lastProgress=0 ;
+int LastPrint = 0;
 void printProgress(bt_args_t *args) {
   // long size = args->bt_info->length;
   long num_pieces = args->bt_info->num_pieces;
   int pieces_left = piece_to_socket_map.size();
   int num_sockets = socket_to_piecelist_map.size();
   double progress = ((double)(num_pieces - pieces_left)/(double) num_pieces) * (double)100;  
-  
+  string log;
+  // print log to error console
+  log = "[" + getTimeStamp("%F %T") + "] ";
   if (progress < 100.0) {
-    std::cout << "\33[2K\rProgress : "<< progress << "% | " << "Connections : " << num_sockets;
+    std::cout << "\33[2K\r"<< log <<"Progress : "<< progress << "% | " << "Connections : " << num_sockets;
   } else if (lastProgress < 100.0 && progress >= 100.0) {
-    std::cout << "\33[2K\rProgress : "<< progress << "% | " << "Download completed ";
-  } else 
-    std::cout << "\33[2K\rSeeding  ";
+    std::cout << "\33[2K\r"<< log <<"Progress : "<< progress << "% | " << "Download completed ";
+  } else {
+    if (LastPrint % 10 == 0) 
+      std::cout << "\33[2K\r"<< log <<"Seeding  ";
+    LastPrint++;
+    if (LastPrint >= 101) 
+      LastPrint = LastPrint % 100;
+  }
   
   lastProgress = progress;
   std::cout.flush();  
@@ -478,7 +486,10 @@ int registerSocket(int s) {
   auto it = socket_to_piecelist_map.find(s);
   if (it == socket_to_piecelist_map.end()) {
     std::set<int> tmp;    
+    string logM;
     socket_to_piecelist_map.insert(std::make_pair(s,tmp));
+    logM = "[" + getTimeStamp("%F %T") + "] ";  
+    std::cout << "\n\33[2K\r"<< logM <<"Handshake done for Socket " << s;
   }
   return 0;
 }
@@ -534,3 +545,4 @@ void checkAndKillPiece() {
 
 std::vector<char> oldData;
 #endif
+

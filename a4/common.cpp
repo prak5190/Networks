@@ -38,12 +38,27 @@
 #include <sstream>
 #include <string.h>
 #include <pthread.h>
+#include "timeutil.cpp"
+using std::string;
+using std::vector;
 //0-10
+string getTimeStamp(const char *timeFormat) {
+  time_t current_time;
+  struct tm* time_info;
+  char buffer[100];
+  //get current time
+  time(&current_time);
+  //convert it to local time
+  time_info = localtime(&current_time);
+  // Formated time stamp
+  strftime(buffer, 100, timeFormat, time_info);
+  return string(buffer);
+}
+
 float LOG_LEVEL = 5;
 bool log_if(float level) {
   return level >= LOG_LEVEL ? true : false;
 }
-#include "timeutil.cpp"
 
 // Pthread stuff
 void thread_resume(pthread_mutex_t &mut,pthread_cond_t &cond) {
@@ -68,8 +83,7 @@ int thread_timed_wait (pthread_mutex_t &mut ,pthread_cond_t &cond ,int mseconds)
   return error;
 };
 
-using std::string;
-using std::vector;
+
 // #include "timeutil.cpp"
 #include "bt_lib.cpp"
 #include "fileHandler.cpp" 

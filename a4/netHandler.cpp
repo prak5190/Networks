@@ -219,6 +219,7 @@ int handleData(bt_args_t *bt_args, vector<char> vbuf , int s) {
       //     url_to_socket_map.insert(std::make_pair(string("localhost:")+std::to_string(port), s));
       //   }
       // }
+      registerSocket(s);
       int mc = sendBitFieldMessage(bt_args,s);      
       if(socket_to_piecelist_map.find(s) == socket_to_piecelist_map.end()) {
         sendHandshakeMsg(bt_args,s);

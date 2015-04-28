@@ -260,7 +260,9 @@ int sendBitFieldMessage(bt_args_t *bt_args , int s) {
   int n = send(s,m,sizeof(bt_msg_t) + length,0); 
   //bt_msg_t *mgs = parseBitField(m,length);
   if (n < 0) {
-    std::cout << "S:Bitfield Message sending failed  "<< s << std::endl;
+    string log;
+    log = "[" + getTimeStamp("%F %T") + "] ";  
+    std::cout << "\n"<<log << "S:Bitfield Message sending failed  "<< s << std::endl;
     return -1;
   } 
   return 0;  
